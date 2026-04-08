@@ -1,0 +1,241 @@
+/**
+ * Typed query helpers for the spotify-helper database.
+ *
+ * Every function is pure — it takes a `DbExecutor` as its first argument
+ * rather than depending on a global connection. This makes the helpers
+ * composable, testable, and safe to call from any context.
+ *
+ * Lowercase normalisation happens at insert/upsert time so that queries
+ * can compare directly against stored lowercase columns.
+ */
+
+import type {
+  DbExecutor,
+  PlaylistRow,
+  PlaylistTrackRow,
+  RecentPlayRow,
+  TrackRow,
+} from './types.js';
+
+// ---------------------------------------------------------------------------
+// Playlists
+// ---------------------------------------------------------------------------
+
+/**
+ * Insert or update a playlist.
+ *
+ * @param exec     - Database executor.
+ * @param playlist - Playlist data (all fields except auto-generated ones).
+ */
+export async function upsertPlaylist(
+  exec: DbExecutor,
+  playlist: PlaylistRow,
+): Promise<void> {
+  const sql = `
+    INSERT INTO playlists (id, name, owner, snapshot_id, image_url, synced_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      name        = excluded.name,
+      owner       = excluded.owner,
+      snapshot_id = excluded.snapshot_id,
+      image_url   = excluded.image_url,
+      synced_at   = excluded.synced_at;`;
+
+  await exec(sql, [
+    playlist.id,
+    playlist.name,
+    playlist.owner,
+    playlist.snapshot_id,
+    playlist.image_url,
+    playlist.synced_at,
+  ]);
+}
+
+// ---------------------------------------------------------------------------
+// Tracks
+// ---------------------------------------------------------------------------
+
+/**
+ * Insert or update a track.
+ *
+ * `name_lower` and `artist_lower` are derived automatically at insert time
+ * from `name` and `artist_name` respectively.
+ *
+ * @param exec  - Database executor.
+ * @param track - Track data. `name_lower` and `artist_lower` are optional;
+ *                they will be computed if not provided.
+ */
+export async function upsertTrack(
+  exec: DbExecutor,
+  track: Omit<TrackRow, 'name_lower' | 'artist_lower'>,
+): Promise<void> {
+  const nameLower = track.name.toLowerCase();
+  const artistLower = track.artist_name.toLowerCase();
+
+  const sql = `
+    INSERT INTO tracks
+      (id, name, name_lower, artist_name, artist_lower, album_name,
+       duration_ms, popularity, release_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      name         = excluded.name,
+      name_lower   = excluded.name_lower,
+      artist_name  = excluded.artist_name,
+      artist_lower = excluded.artist_lower,
+      album_name   = excluded.album_name,
+      duration_ms  = excluded.duration_ms,
+      popularity   = excluded.popularity,
+      release_date = excluded.release_date;`;
+
+  await exec(sql, [
+    track.id,
+    track.name,
+    nameLower,
+    track.artist_name,
+    artistLower,
+    track.album_name,
+    track.duration_ms ?? null,
+    track.popularity ?? null,
+    track.release_date ?? null,
+  ]);
+}
+
+// ---------------------------------------------------------------------------
+// Playlist <-> Track links
+// ---------------------------------------------------------------------------
+
+/**
+ * Link a track to a playlist (or update the link metadata).
+ *
+ * @param exec       - Database executor.
+ * @param playlistId - Playlist ID.
+ * @param trackId    - Track ID.
+ * @param addedAt    - Unix timestamp (ms) when the track was added.
+ * @param position   - Position in the playlist.
+ */
+export async function linkPlaylistTrack(
+  exec: DbExecutor,
+  playlistId: string,
+  trackId: string,
+  addedAt: number | null,
+  position: number | null,
+): Promise<void> {
+  const sql = `
+    INSERT INTO playlist_tracks (playlist_id, track_id, added_at, position)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(playlist_id, track_id) DO UPDATE SET
+      added_at = excluded.added_at,
+      position = excluded.position;`;
+
+  await exec(sql, [playlistId, trackId, addedAt, position]);
+}
+
+// ---------------------------------------------------------------------------
+// Search helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Case-insensitive search for tracks by name.
+ *
+ * Compares against the pre-computed `name_lower` column using LIKE,
+ * so no runtime lowercasing is needed.
+ *
+ * @param exec  - Database executor.
+ * @param query - Search string (will be lowercased and wrapped in `%`).
+ * @returns Matching track rows.
+ */
+export async function searchTracksByName(
+  exec: DbExecutor,
+  query: string,
+): Promise<TrackRow[]> {
+  const sql = `SELECT * FROM tracks WHERE name_lower LIKE ? ORDER BY name_lower;`;
+  const pattern = `%${query.toLowerCase()}%`;
+  const rows = await exec(sql, [pattern]);
+  return rows as unknown as TrackRow[];
+}
+
+/**
+ * Case-insensitive search for tracks by artist name.
+ *
+ * @param exec  - Database executor.
+ * @param query - Search string (will be lowercased and wrapped in `%`).
+ * @returns Matching track rows.
+ */
+export async function searchTracksByArtist(
+  exec: DbExecutor,
+  query: string,
+): Promise<TrackRow[]> {
+  const sql = `SELECT * FROM tracks WHERE artist_lower LIKE ? ORDER BY artist_lower;`;
+  const pattern = `%${query.toLowerCase()}%`;
+  const rows = await exec(sql, [pattern]);
+  return rows as unknown as TrackRow[];
+}
+
+// ---------------------------------------------------------------------------
+// Playlist lookups
+// ---------------------------------------------------------------------------
+
+/**
+ * Get all playlists that contain a given track.
+ *
+ * @param exec    - Database executor.
+ * @param trackId - Track ID to look up.
+ * @returns Playlist rows that include the track.
+ */
+export async function getPlaylistsForTrack(
+  exec: DbExecutor,
+  trackId: string,
+): Promise<PlaylistRow[]> {
+  const sql = `
+    SELECT p.*
+    FROM playlists p
+    INNER JOIN playlist_tracks pt ON pt.playlist_id = p.id
+    WHERE pt.track_id = ?
+    ORDER BY p.name;`;
+
+  const rows = await exec(sql, [trackId]);
+  return rows as unknown as PlaylistRow[];
+}
+
+// ---------------------------------------------------------------------------
+// Recent plays
+// ---------------------------------------------------------------------------
+
+/**
+ * Record a recent play event.
+ *
+ * @param exec     - Database executor.
+ * @param trackId  - ID of the track that was played.
+ * @param playedAt - Unix timestamp (ms) of the play event.
+ */
+export async function addRecentPlay(
+  exec: DbExecutor,
+  trackId: string,
+  playedAt: number,
+): Promise<void> {
+  const sql = `INSERT INTO recent_plays (track_id, played_at) VALUES (?, ?);`;
+  await exec(sql, [trackId, playedAt]);
+}
+
+/**
+ * Retrieve recent plays, optionally filtered by a minimum timestamp.
+ *
+ * @param exec  - Database executor.
+ * @param since - Only return plays after this Unix timestamp (ms). Defaults to 0.
+ * @param limit - Maximum number of rows to return. Defaults to 50.
+ * @returns Recent play rows joined with track data, newest first.
+ */
+export async function getRecentPlays(
+  exec: DbExecutor,
+  since: number = 0,
+  limit: number = 50,
+): Promise<RecentPlayRow[]> {
+  const sql = `
+    SELECT * FROM recent_plays
+    WHERE played_at > ?
+    ORDER BY played_at DESC
+    LIMIT ?;`;
+
+  const rows = await exec(sql, [since, limit]);
+  return rows as unknown as RecentPlayRow[];
+}
