@@ -1,161 +1,228 @@
 /**
- * Svelte auth store — manages Spotify OAuth state and token lifecycle.
- *
- * Responsibilities:
- * - Initiate login (PKCE flow)
- * - Handle token storage after successful exchange
- * - Proactive token refresh
- * - Logout (clear all tokens)
+ * Svelte auth store for Spotify OAuth with PKCE.
+ * Manages authentication state, token refresh, and login/logout flows.
  */
 
-import { writable, derived, get } from 'svelte/store';
-import {
-	generateCodeVerifier,
-	generateCodeChallenge,
-	generateStateNonce,
-	buildAuthUrl,
-} from '$lib/auth/pkce';
-import {
-	storeTokens,
-	clearAllTokens,
-	getRefreshToken,
-	getAccessToken,
-	isAccessTokenValid,
-	setCodeVerifier,
-} from '$lib/auth/tokens';
+import { writable, get } from 'svelte/store';
+import { generateCodeVerifier, generateCodeChallenge, generateState, buildAuthUrl } from '$lib/auth/pkce';
+import { storeCodeVerifier, getCodeVerifier, clearCodeVerifier, storeState, getState, clearState, storeRefreshToken, getRefreshToken, clearAllTokens } from '$lib/auth/tokens';
 import { REQUIRED_SCOPES } from '$lib/spotify/scopes';
+import { config, getRedirectUri } from '$lib/config';
 
-const AUTH_WORKER_URL =
-	(import.meta.env.PUBLIC_AUTH_WORKER_URL as string | undefined) ?? 'http://localhost:8787';
-
-const CLIENT_ID = import.meta.env.PUBLIC_SPOTIFY_CLIENT_ID as string;
-const REDIRECT_URI = import.meta.env.PUBLIC_SPOTIFY_REDIRECT_URI as string;
-
-const STATE_NONCE_KEY = 'spotify_auth_state';
-
-interface AuthState {
+export interface AuthState {
 	isAuthenticated: boolean;
-	isLoading: boolean;
+	accessToken: string | null;
+	expiresAt: number | null;
 	error: string | null;
 }
 
+const initialState: AuthState = {
+	isAuthenticated: false,
+	accessToken: null,
+	expiresAt: null,
+	error: null
+};
+
 function createAuthStore() {
-	const { subscribe, set, update } = writable<AuthState>({
-		isAuthenticated: isAccessTokenValid(),
-		isLoading: false,
-		error: null,
-	});
+	const { subscribe, set, update } = writable<AuthState>(initialState);
 
+	let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function clearRefreshTimer(): void {
+		if (refreshTimer !== null) {
+			clearTimeout(refreshTimer);
+			refreshTimer = null;
+		}
+	}
+
+	function scheduleRefresh(expiresAt: number): void {
+		clearRefreshTimer();
+
+		const now = Date.now();
+		const refreshAt = expiresAt - 60_000; // 60 seconds before expiry
+		const delay = Math.max(refreshAt - now, 0);
+
+		refreshTimer = setTimeout(() => {
+			refreshAccessToken();
+		}, delay);
+	}
+
+	/**
+	 * Initiate the Spotify login flow.
+	 * Generates a PKCE pair, stores the verifier, and redirects to Spotify.
+	 */
 	async function login(): Promise<void> {
-		update((s) => ({ ...s, isLoading: true, error: null }));
+		try {
+			const verifier = generateCodeVerifier();
+			const challenge = await generateCodeChallenge(verifier);
+			const state = generateState();
 
-		const codeVerifier = generateCodeVerifier();
-		const codeChallenge = await generateCodeChallenge(codeVerifier);
-		const state = generateStateNonce();
+			storeCodeVerifier(verifier);
+			storeState(state);
 
-		setCodeVerifier(codeVerifier);
-		sessionStorage.setItem(STATE_NONCE_KEY, state);
+			const authUrl = buildAuthUrl(
+				config.spotifyClientId,
+				getRedirectUri(),
+				challenge,
+				state,
+				REQUIRED_SCOPES
+			);
 
-		const url = buildAuthUrl({
-			clientId: CLIENT_ID,
-			redirectUri: REDIRECT_URI,
-			scopes: REQUIRED_SCOPES,
-			codeChallenge,
-			state,
-		});
-
-		window.location.href = url;
+			window.location.href = authUrl;
+		} catch (err) {
+			update((s) => ({
+				...s,
+				error: err instanceof Error ? err.message : 'Failed to initiate login'
+			}));
+		}
 	}
 
-	async function handleCallback(code: string, returnedState: string): Promise<void> {
-		update((s) => ({ ...s, isLoading: true, error: null }));
-
-		const expectedState = sessionStorage.getItem(STATE_NONCE_KEY);
-		if (!expectedState || returnedState !== expectedState) {
-			const msg = 'State mismatch — possible CSRF attack';
-			update((s) => ({ ...s, isLoading: false, error: msg }));
-			throw new Error(msg);
+	/**
+	 * Handle the OAuth callback after Spotify redirects back.
+	 * Validates state, exchanges the authorization code for tokens via the auth Worker.
+	 */
+	async function handleCallback(code: string, state: string): Promise<void> {
+		const storedState = getState();
+		if (!storedState || storedState !== state) {
+			update((s) => ({ ...s, error: 'Invalid state parameter — possible CSRF attack' }));
+			clearState();
+			return;
 		}
-		sessionStorage.removeItem(STATE_NONCE_KEY);
 
-		const codeVerifier = sessionStorage.getItem('spotify_code_verifier');
+		const codeVerifier = getCodeVerifier();
 		if (!codeVerifier) {
-			const msg = 'Missing code_verifier';
-			update((s) => ({ ...s, isLoading: false, error: msg }));
-			throw new Error(msg);
+			update((s) => ({ ...s, error: 'Missing code verifier — please try logging in again' }));
+			return;
 		}
 
-		const response = await fetch(`${AUTH_WORKER_URL}/exchange`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ code, code_verifier: codeVerifier, redirect_uri: REDIRECT_URI }),
-		});
+		try {
+			const response = await fetch(`${config.authWorkerUrl}/token`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					code,
+					code_verifier: codeVerifier,
+					redirect_uri: getRedirectUri()
+				})
+			});
 
-		if (!response.ok) {
-			const err = await response.json().catch(() => ({})) as { error?: string };
-			const msg = err.error ?? 'Token exchange failed';
-			update((s) => ({ ...s, isLoading: false, error: msg }));
-			throw new Error(msg);
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(
+					(errorData as Record<string, string>).error || `Token exchange failed (${response.status})`
+				);
+			}
+
+			const data = (await response.json()) as {
+				access_token: string;
+				refresh_token: string;
+				expires_in: number;
+			};
+
+			const expiresAt = Date.now() + data.expires_in * 1000;
+
+			if (data.refresh_token) {
+				storeRefreshToken(data.refresh_token);
+			}
+
+			clearCodeVerifier();
+			clearState();
+
+			set({
+				isAuthenticated: true,
+				accessToken: data.access_token,
+				expiresAt,
+				error: null
+			});
+
+			scheduleRefresh(expiresAt);
+		} catch (err) {
+			update((s) => ({
+				...s,
+				error: err instanceof Error ? err.message : 'Token exchange failed'
+			}));
 		}
-
-		const data = await response.json() as {
-			access_token: string;
-			refresh_token: string;
-			expires_in: number;
-		};
-
-		storeTokens({
-			accessToken: data.access_token,
-			expiresIn: data.expires_in,
-			refreshToken: data.refresh_token,
-		});
-
-		set({ isAuthenticated: true, isLoading: false, error: null });
 	}
 
-	async function refresh(): Promise<void> {
+	/**
+	 * Refresh the access token using the stored refresh token.
+	 * On 401, retries exactly once before failing cleanly.
+	 */
+	async function refreshAccessToken(isRetry: boolean = false): Promise<void> {
 		const refreshToken = getRefreshToken();
 		if (!refreshToken) {
 			logout();
 			return;
 		}
 
-		const response = await fetch(`${AUTH_WORKER_URL}/refresh`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ refresh_token: refreshToken }),
-		});
+		try {
+			const response = await fetch(`${config.authWorkerUrl}/refresh`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ refresh_token: refreshToken })
+			});
 
-		if (!response.ok) {
+			if (response.status === 401 && !isRetry) {
+				await refreshAccessToken(true);
+				return;
+			}
+
+			if (!response.ok) {
+				throw new Error(`Token refresh failed (${response.status})`);
+			}
+
+			const data = (await response.json()) as {
+				access_token: string;
+				refresh_token?: string;
+				expires_in: number;
+			};
+
+			const expiresAt = Date.now() + data.expires_in * 1000;
+
+			if (data.refresh_token) {
+				storeRefreshToken(data.refresh_token);
+			}
+
+			set({
+				isAuthenticated: true,
+				accessToken: data.access_token,
+				expiresAt,
+				error: null
+			});
+
+			scheduleRefresh(expiresAt);
+		} catch (err) {
 			logout();
-			return;
 		}
-
-		const data = await response.json() as {
-			access_token: string;
-			expires_in: number;
-		};
-
-		storeTokens({ accessToken: data.access_token, expiresIn: data.expires_in });
 	}
 
+	/**
+	 * Log out: clear all tokens, reset store state, cancel refresh timer.
+	 */
 	function logout(): void {
+		clearRefreshTimer();
 		clearAllTokens();
-		set({ isAuthenticated: false, isLoading: false, error: null });
+		set(initialState);
 	}
 
-	/** Return the current access token, refreshing first if needed. */
-	async function getToken(): Promise<string | null> {
-		if (!isAccessTokenValid()) {
-			await refresh();
+	/**
+	 * Initialize auth state from stored refresh token (call on app startup).
+	 */
+	async function initialize(): Promise<void> {
+		const refreshToken = getRefreshToken();
+		if (refreshToken) {
+			await refreshAccessToken();
 		}
-		return getAccessToken();
 	}
 
-	return { subscribe, login, handleCallback, refresh, logout, getToken };
+	return {
+		subscribe,
+		login,
+		handleCallback,
+		refreshAccessToken,
+		logout,
+		initialize
+	};
 }
 
-export const auth = createAuthStore();
-
-/** Derived readable: true when user is authenticated. */
-export const isAuthenticated = derived(auth, ($auth) => $auth.isAuthenticated);
+export const authStore = createAuthStore();

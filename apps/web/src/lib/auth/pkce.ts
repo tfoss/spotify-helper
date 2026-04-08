@@ -1,35 +1,71 @@
 /**
- * PKCE (Proof Key for Code Exchange) helpers for Spotify OAuth.
- * Generates a random code_verifier and derives code_challenge via SHA-256.
+ * PKCE (Proof Key for Code Exchange) helpers for Spotify OAuth 2.0.
+ * Implements RFC 7636 for public client authorization.
  */
 
-const CODE_VERIFIER_LENGTH = 128;
+const UNRESERVED_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
 
 /**
- * Generate a cryptographically random code_verifier string.
- * Uses URL-safe base64 characters (A-Z, a-z, 0-9, -, _, .).
+ * Generate a cryptographically random code verifier string.
+ * Uses unreserved characters per RFC 7636 Section 4.1.
+ * Length must be between 43 and 128 characters.
  */
-export function generateCodeVerifier(): string {
-	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_~.';
-	const randomBytes = crypto.getRandomValues(new Uint8Array(CODE_VERIFIER_LENGTH));
-	return Array.from(randomBytes)
-		.map((byte) => chars[byte % chars.length])
+export function generateCodeVerifier(length: number = 64): string {
+	if (length < 43 || length > 128) {
+		throw new RangeError('Code verifier length must be between 43 and 128 characters');
+	}
+
+	const randomValues = crypto.getRandomValues(new Uint8Array(length));
+	return Array.from(randomValues)
+		.map((byte) => UNRESERVED_CHARS[byte % UNRESERVED_CHARS.length])
 		.join('');
 }
 
 /**
- * Derive the code_challenge from a code_verifier using SHA-256.
- * Returns the URL-safe base64-encoded SHA-256 hash (no padding).
+ * Generate a code challenge from a code verifier using S256 method.
+ * Returns the base64url-encoded SHA-256 hash of the verifier.
  */
-export async function generateCodeChallenge(codeVerifier: string): Promise<string> {
+export async function generateCodeChallenge(verifier: string): Promise<string> {
 	const encoder = new TextEncoder();
-	const data = encoder.encode(codeVerifier);
+	const data = encoder.encode(verifier);
 	const digest = await crypto.subtle.digest('SHA-256', data);
+
 	return base64UrlEncode(digest);
 }
 
 /**
- * Encode an ArrayBuffer as URL-safe base64 (no padding).
+ * Generate a random state parameter for CSRF protection.
+ */
+export function generateState(): string {
+	const randomValues = crypto.getRandomValues(new Uint8Array(32));
+	return base64UrlEncode(randomValues.buffer as ArrayBuffer);
+}
+
+/**
+ * Build the full Spotify authorization URL with PKCE parameters.
+ */
+export function buildAuthUrl(
+	clientId: string,
+	redirectUri: string,
+	codeChallenge: string,
+	state: string,
+	scopes: readonly string[]
+): string {
+	const params = new URLSearchParams({
+		response_type: 'code',
+		client_id: clientId,
+		redirect_uri: redirectUri,
+		code_challenge_method: 'S256',
+		code_challenge: codeChallenge,
+		state,
+		scope: scopes.join(' ')
+	});
+
+	return `https://accounts.spotify.com/authorize?${params.toString()}`;
+}
+
+/**
+ * Base64url encode an ArrayBuffer (no padding, URL-safe alphabet).
  */
 function base64UrlEncode(buffer: ArrayBuffer): string {
 	const bytes = new Uint8Array(buffer);
@@ -37,34 +73,5 @@ function base64UrlEncode(buffer: ArrayBuffer): string {
 	for (const byte of bytes) {
 		binary += String.fromCharCode(byte);
 	}
-	return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-}
-
-/**
- * Generate a cryptographically random state nonce for CSRF protection.
- */
-export function generateStateNonce(): string {
-	const bytes = crypto.getRandomValues(new Uint8Array(32));
-	return base64UrlEncode(bytes.buffer);
-}
-
-/**
- * Build a Spotify authorization URL with PKCE parameters.
- */
-export function buildAuthUrl(params: {
-	clientId: string;
-	redirectUri: string;
-	scopes: string[];
-	codeChallenge: string;
-	state: string;
-}): string {
-	const url = new URL('https://accounts.spotify.com/authorize');
-	url.searchParams.set('client_id', params.clientId);
-	url.searchParams.set('response_type', 'code');
-	url.searchParams.set('redirect_uri', params.redirectUri);
-	url.searchParams.set('scope', params.scopes.join(' '));
-	url.searchParams.set('code_challenge_method', 'S256');
-	url.searchParams.set('code_challenge', params.codeChallenge);
-	url.searchParams.set('state', params.state);
-	return url.toString();
+	return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
