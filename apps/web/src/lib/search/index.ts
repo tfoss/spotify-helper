@@ -1,0 +1,124 @@
+/**
+ * Search domain logic — composes DB query helpers into SearchResults.
+ *
+ * All functions are pure: they accept a `DbExecutor` rather than a global
+ * connection, keeping them testable and composable.
+ */
+
+import type { DbExecutor, TrackRow, PlaylistRow } from '$lib/db/types';
+import {
+	searchTracksByName,
+	searchTracksByArtist,
+	getPlaylistsForTrack,
+} from '$lib/db/queries';
+import type { SearchQuery, SearchResultItem, SearchResults } from './types';
+
+/**
+ * Build the canonical Spotify web URL for a playlist.
+ */
+export function buildSpotifyPlaylistUrl(playlistId: string): string {
+	return `https://open.spotify.com/playlist/${playlistId}`;
+}
+
+/**
+ * Convert a track + playlist pair into a SearchResultItem.
+ */
+function toResultItem(
+	track: TrackRow,
+	playlist: PlaylistRow,
+	matchType: SearchResultItem['matchType'],
+): SearchResultItem {
+	return {
+		playlistId: playlist.id,
+		playlistName: playlist.name,
+		playlistOwner: playlist.owner,
+		trackId: track.id,
+		trackName: track.name,
+		artistName: track.artist_name,
+		albumName: track.album_name,
+		matchType,
+		spotifyPlaylistUrl: buildSpotifyPlaylistUrl(playlist.id),
+	};
+}
+
+/**
+ * Expand a list of tracks into SearchResultItems by fetching each track's playlists.
+ */
+async function expandTracks(
+	tracks: TrackRow[],
+	matchType: SearchResultItem['matchType'],
+	exec: DbExecutor,
+): Promise<SearchResultItem[]> {
+	const items: SearchResultItem[] = [];
+	for (const track of tracks) {
+		const playlists = await getPlaylistsForTrack(exec, track.id);
+		for (const playlist of playlists) {
+			items.push(toResultItem(track, playlist, matchType));
+		}
+	}
+	return items;
+}
+
+/**
+ * Deduplicate result items by (playlistId, trackId) pair.
+ */
+function deduplicateItems(items: SearchResultItem[]): SearchResultItem[] {
+	const seen = new Set<string>();
+	return items.filter((item) => {
+		const key = `${item.playlistId}::${item.trackId}`;
+		if (seen.has(key)) return false;
+		seen.add(key);
+		return true;
+	});
+}
+
+/**
+ * Main search entry point. Queries the local DB and returns structured results.
+ *
+ * - mode 'track': search by track name
+ * - mode 'artist': search by artist name
+ * - mode 'both': intersect tracks matching both track name and artist name
+ *
+ * Empty queries return empty results immediately.
+ */
+export async function searchPlaylists(
+	query: SearchQuery,
+	exec: DbExecutor,
+): Promise<SearchResults> {
+	const start = performance.now();
+
+	if (!query.query.trim()) {
+		return { query, items: [], totalMatches: 0, searchTimeMs: 0 };
+	}
+
+	let items: SearchResultItem[] = [];
+
+	if (query.mode === 'track') {
+		const tracks = await searchTracksByName(exec, query.query);
+		items = await expandTracks(tracks, 'track', exec);
+	} else if (query.mode === 'artist') {
+		const tracks = await searchTracksByArtist(exec, query.query);
+		items = await expandTracks(tracks, 'artist', exec);
+	} else {
+		// mode === 'both': intersect tracks by name and artist
+		const byName = await searchTracksByName(exec, query.query);
+		const artistTerm = query.artistQuery ?? query.query;
+		const byArtist = await searchTracksByArtist(exec, artistTerm);
+
+		// Intersect: tracks that match both queries
+		const artistIds = new Set(byArtist.map((t) => t.id));
+		const intersected = byName.filter((t) => artistIds.has(t.id));
+
+		items = await expandTracks(intersected, 'track', exec);
+	}
+
+	const deduped = deduplicateItems(items);
+	const searchTimeMs = Math.round(performance.now() - start);
+
+	return {
+		query,
+		items: deduped,
+		totalMatches: deduped.length,
+		searchTimeMs,
+	};
+}
