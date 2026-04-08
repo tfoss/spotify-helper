@@ -11,6 +11,7 @@ __pycache__/
 # Build outputs
 dist/
 build/
+.svelte-kit/
 out/
 target/
 *.egg-info/

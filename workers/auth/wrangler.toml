@@ -1,0 +1,6 @@
+name = "spotify-helper-auth"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[vars]
+SPOTIFY_REDIRECT_URI = "https://spotify-helper-auth.workers.dev/callback"
