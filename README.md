@@ -65,7 +65,26 @@ Spotify Helper uses PKCE (Proof Key for Code Exchange) OAuth. The browser genera
 
 ## Deployment
 
-See the Deployment section in [PROJECT.md](./PROJECT.md) for full details. In short: the SvelteKit app deploys to Cloudflare Pages, and the auth worker deploys via `wrangler deploy` in the `workers/auth/` directory. Set `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, and `ALLOWED_ORIGIN` as Worker secrets.
+Run `scripts/deploy.sh` to deploy both the auth Worker and the SvelteKit frontend to Cloudflare. Prerequisites: `wrangler` CLI authenticated (`npx wrangler login`).
+
+Before first deploy, set the required Worker secrets:
+
+```
+cd workers/auth
+npx wrangler secret put SPOTIFY_CLIENT_ID
+npx wrangler secret put SPOTIFY_CLIENT_SECRET
+npx wrangler secret put ALLOWED_ORIGIN
+```
+
+Set these environment variables in Cloudflare Pages:
+
+| Variable | Description |
+|----------|-------------|
+| `PUBLIC_SPOTIFY_CLIENT_ID` | Your Spotify app client ID |
+| `PUBLIC_AUTH_WORKER_URL` | Deployed Worker URL (e.g. `https://spotify-auth.<account>.workers.dev`) |
+| `PUBLIC_SPOTIFY_REDIRECT_URI` | Production callback URL |
+
+See [PROJECT.md](./PROJECT.md) for full deployment details.
 
 ## License
 
