@@ -1,10 +1,26 @@
 <script lang="ts">
 	import { authStore } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 
-	onMount(() => {
-		authStore.initialize();
+	let initializing = $state(true);
+	let showWipeConfirm = $state(false);
+
+	onMount(async () => {
+		await authStore.initialize();
+		initializing = false;
 	});
+
+	function handleLogout() {
+		authStore.logout();
+		goto('/');
+	}
+
+	function handleWipeAndLogout() {
+		authStore.logout();
+		showWipeConfirm = false;
+		goto('/');
+	}
 </script>
 
 <div class="flex flex-col items-center justify-center py-20">
@@ -13,7 +29,12 @@
 		Search, analyze, and explore your Spotify library.
 	</p>
 
-	{#if $authStore.isAuthenticated}
+	{#if initializing}
+		<div class="flex items-center gap-3">
+			<div class="h-6 w-6 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
+			<span class="text-gray-400">Checking authentication...</span>
+		</div>
+	{:else if $authStore.isAuthenticated}
 		<div class="flex gap-4">
 			<a
 				href="/search"
@@ -28,12 +49,39 @@
 				Analytics
 			</a>
 			<button
-				onclick={() => authStore.logout()}
+				onclick={handleLogout}
 				class="rounded-lg border border-gray-600 px-6 py-3 font-medium text-gray-300 hover:border-gray-400 hover:text-white"
 			>
 				Log out
 			</button>
 		</div>
+
+		<button
+			onclick={() => (showWipeConfirm = true)}
+			class="mt-4 text-xs text-gray-600 hover:text-gray-400"
+		>
+			Log out &amp; clear local data
+		</button>
+
+		{#if showWipeConfirm}
+			<div class="mt-3 rounded-lg border border-red-800 bg-red-950/50 p-4 text-center">
+				<p class="text-sm text-red-400">This will delete all cached data. Continue?</p>
+				<div class="mt-3 flex justify-center gap-3">
+					<button
+						onclick={handleWipeAndLogout}
+						class="rounded bg-red-700 px-4 py-1.5 text-sm text-white hover:bg-red-600"
+					>
+						Yes, clear everything
+					</button>
+					<button
+						onclick={() => (showWipeConfirm = false)}
+						class="rounded bg-gray-800 px-4 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
+					>
+						Cancel
+					</button>
+				</div>
+			</div>
+		{/if}
 	{:else}
 		<button
 			onclick={() => authStore.login()}

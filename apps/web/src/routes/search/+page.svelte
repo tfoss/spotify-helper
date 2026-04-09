@@ -4,8 +4,6 @@
 	import type { SearchMode } from '$lib/search/types';
 	import type { DbExecutor } from '$lib/db/types';
 
-	// DbExecutor is injected from the layout/context in a real app;
-	// this page accepts it as a prop so it can be provided by the layout.
 	export let exec: DbExecutor | null = null;
 
 	let query = '';
@@ -52,15 +50,44 @@
 		{/if}
 	</div>
 
-	{#if $search.results}
-		<p class="mb-3 text-sm text-gray-500">
-			Found {$search.results.totalMatches} result{$search.results.totalMatches === 1 ? '' : 's'} in {$search.results.searchTimeMs}ms
-		</p>
+	<!-- Loading state -->
+	{#if $search.isSearching}
+		<div class="flex items-center justify-center py-10">
+			<div class="h-6 w-6 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
+			<span class="ml-3 text-gray-400">Searching...</span>
+		</div>
+	{:else if $search.error}
+		<!-- Error state -->
+		<div class="rounded-lg border border-red-800 bg-red-950/50 p-6 text-center">
+			<p class="text-red-400">{$search.error}</p>
+			<button
+				onclick={handleInput}
+				class="mt-3 rounded bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+			>
+				Retry
+			</button>
+		</div>
+	{:else if $search.results}
+		{#if $search.results.totalMatches > 0}
+			<p class="mb-3 text-sm text-gray-500">
+				Found {$search.results.totalMatches} result{$search.results.totalMatches === 1 ? '' : 's'} in {$search.results.searchTimeMs}ms
+			</p>
+			<SearchResults
+				results={$search.results}
+				isSearching={$search.isSearching}
+				error={$search.error}
+			/>
+		{:else if query.trim()}
+			<!-- Empty state after search -->
+			<div class="py-10 text-center">
+				<p class="text-gray-500">No results found for "{query}"</p>
+				<p class="mt-2 text-sm text-gray-600">Try a different search term or mode.</p>
+			</div>
+		{/if}
+	{:else if !query.trim()}
+		<!-- Initial empty state -->
+		<div class="py-10 text-center text-gray-600">
+			<p>Start typing to search your synced playlists.</p>
+		</div>
 	{/if}
-
-	<SearchResults
-		results={$search.results}
-		isSearching={$search.isSearching}
-		error={$search.error}
-	/>
 </div>
