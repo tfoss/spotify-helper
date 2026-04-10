@@ -1,6 +1,8 @@
 <script lang="ts">
 	import '../app.css';
+	import { onMount } from 'svelte';
 	import { authStore } from '$lib/stores/auth';
+	import { dbStore } from '$lib/stores/db';
 	import { page } from '$app/stores';
 	import SyncStatus from '$components/shared/SyncStatus.svelte';
 	import ErrorBoundary from '$components/shared/ErrorBoundary.svelte';
@@ -10,6 +12,10 @@
 	let { children } = $props();
 
 	let mobileMenuOpen = $state(false);
+
+	onMount(() => {
+		dbStore.initialize();
+	});
 
 	function isActive(path: string): boolean {
 		const current = $page.url.pathname;
