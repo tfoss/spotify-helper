@@ -4,12 +4,30 @@
 	import { goto } from '$app/navigation';
 
 	let initializing = $state(true);
+	let initError = $state<string | null>(null);
 	let showWipeConfirm = $state(false);
 
 	onMount(async () => {
-		await authStore.initialize();
-		initializing = false;
+		try {
+			await authStore.initialize();
+		} catch (err) {
+			initError = err instanceof Error ? err.message : 'Failed to initialize';
+		} finally {
+			initializing = false;
+		}
 	});
+
+	async function retryInit() {
+		initializing = true;
+		initError = null;
+		try {
+			await authStore.initialize();
+		} catch (err) {
+			initError = err instanceof Error ? err.message : 'Failed to initialize';
+		} finally {
+			initializing = false;
+		}
+	}
 
 	function handleLogout() {
 		authStore.logout();
@@ -33,6 +51,17 @@
 		<div class="flex items-center gap-3">
 			<div class="h-6 w-6 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
 			<span class="text-gray-400">Checking authentication...</span>
+		</div>
+	{:else if initError}
+		<div class="rounded-xl border border-red-800 bg-red-950/50 p-6 text-center">
+			<p class="text-lg font-semibold text-red-400">Failed to initialize</p>
+			<p class="mt-2 text-sm text-gray-400">{initError}</p>
+			<button
+				onclick={retryInit}
+				class="mt-4 rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+			>
+				Try Again
+			</button>
 		</div>
 	{:else if $authStore.isAuthenticated}
 		<div class="flex gap-4">

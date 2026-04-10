@@ -3,11 +3,17 @@
 	import { search } from '$lib/stores/search';
 	import { dbStore } from '$lib/stores/db';
 	import SearchResults from '../../components/search/SearchResults.svelte';
+	import EmptyState from '$components/shared/EmptyState.svelte';
+	import ErrorMessage from '$components/shared/ErrorMessage.svelte';
 	import type { SearchMode } from '$lib/search/types';
 
 	let query = '';
 	let mode: SearchMode = 'track';
 	let artistQuery = '';
+
+	$: dbReady = $dbStore.isReady;
+	$: dbInitializing = $dbStore.isInitializing;
+	$: dbError = $dbStore.error;
 
 	function handleInput() {
 		const { executor } = get(dbStore);
@@ -19,6 +25,20 @@
 <div class="mx-auto max-w-3xl px-4 py-10">
 	<h1 class="mb-6 text-3xl font-bold text-white">Search Playlists</h1>
 
+	{#if dbInitializing}
+		<div class="flex items-center justify-center gap-3 py-16">
+			<div class="h-6 w-6 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
+			<span class="text-gray-400">Initializing database...</span>
+		</div>
+	{:else if dbError}
+		<ErrorMessage message={dbError} onretry={() => dbStore.initialize()} />
+	{:else if !dbReady}
+		<EmptyState
+			icon="🔌"
+			title="Database not ready"
+			description="The local database hasn't been initialized yet. This usually resolves automatically."
+		/>
+	{:else}
 	<div class="mb-4 space-y-3">
 		<div class="flex gap-2">
 			<input
@@ -89,5 +109,6 @@
 		<div class="py-10 text-center text-gray-600">
 			<p>Start typing to search your synced playlists.</p>
 		</div>
+	{/if}
 	{/if}
 </div>
