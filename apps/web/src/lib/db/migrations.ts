@@ -6,7 +6,7 @@
  * applied.
  */
 
-import { SCHEMA_V1_STATEMENTS } from './schema.js';
+import { SCHEMA_V1_STATEMENTS, SCHEMA_V2_STATEMENTS } from './schema.js';
 import type { DbExecutor } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -33,6 +33,11 @@ export const MIGRATIONS: readonly Migration[] = [
     version: 1,
     label: 'Initial schema — playlists, tracks, playlist_tracks, recent_plays',
     statements: SCHEMA_V1_STATEMENTS,
+  },
+  {
+    version: 2,
+    label: 'Artist genres — genre tags per artist for genre distribution',
+    statements: SCHEMA_V2_STATEMENTS,
   },
 ] as const;
 

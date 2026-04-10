@@ -241,6 +241,12 @@
 			Overlap &rarr;
 		</a>
 		<a
+			href="/analytics/genre"
+			class="rounded-md px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+		>
+			Genres &rarr;
+		</a>
+		<a
 			href="/analytics/era"
 			class="rounded-md px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
 		>
