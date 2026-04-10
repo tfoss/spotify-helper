@@ -1,18 +1,18 @@
 <script lang="ts">
+	import { get } from 'svelte/store';
 	import { search } from '$lib/stores/search';
+	import { dbStore } from '$lib/stores/db';
 	import SearchResults from '../../components/search/SearchResults.svelte';
 	import type { SearchMode } from '$lib/search/types';
-	import type { DbExecutor } from '$lib/db/types';
-
-	export let exec: DbExecutor | null = null;
 
 	let query = '';
 	let mode: SearchMode = 'track';
 	let artistQuery = '';
 
 	function handleInput() {
-		if (!exec) return;
-		search.performSearch({ query, mode, artistQuery: mode === 'both' ? artistQuery : undefined }, exec);
+		const { executor } = get(dbStore);
+		if (!executor) return;
+		search.performSearch({ query, mode, artistQuery: mode === 'both' ? artistQuery : undefined }, executor);
 	}
 </script>
 
