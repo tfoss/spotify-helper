@@ -7,7 +7,14 @@
 
 import type { SpotifyClient } from '$lib/spotify/client';
 import type { DbExecutor } from '$lib/db/types';
-import { getRecentPlays } from '$lib/db/queries';
+import {
+	getRecentPlays,
+	getRecentPlaysWithTracks,
+	countPlaysByArtist,
+	countPlaysByHour,
+	addRecentPlay,
+	upsertTrack,
+} from '$lib/db/queries';
 import type {
 	TimeRange,
 	TopItem,
@@ -84,24 +91,96 @@ export async function getRecentlyPlayed(
 }
 
 /**
- * Fetch recent plays from the local DB (not Spotify API).
+ * Fetch recent plays from the local DB with full track metadata.
  */
 export async function getLocalRecentPlays(
 	dbExecutor: DbExecutor,
 	since: number,
-	limit = 50,
+	limit = 100,
 ): Promise<RecentActivityResult> {
-	const rows = await getRecentPlays(dbExecutor, since, limit);
+	const rows = await getRecentPlaysWithTracks(dbExecutor, since, limit);
 
 	const plays: RecentPlay[] = rows.map((row) => ({
 		trackId: row.track_id,
-		trackName: '',
-		artistName: '',
-		albumName: '',
+		trackName: row.track_name,
+		artistName: row.artist_name,
+		albumName: row.album_name,
 		playedAt: new Date(row.played_at),
 	}));
 
 	return { plays, totalCount: plays.length };
+}
+
+/**
+ * Persist Spotify recent plays into the local database.
+ *
+ * For each play, upserts the track metadata and inserts the play event.
+ * Skips plays that are already stored (based on track_id + played_at).
+ *
+ * @param plays      - Recent plays from the Spotify API.
+ * @param dbExecutor - Database executor.
+ * @returns Number of new plays persisted.
+ */
+export async function persistRecentPlays(
+	plays: RecentPlay[],
+	dbExecutor: DbExecutor,
+): Promise<number> {
+	let persisted = 0;
+
+	for (const play of plays) {
+		await upsertTrack(dbExecutor, {
+			id: play.trackId,
+			name: play.trackName,
+			artist_name: play.artistName,
+			album_name: play.albumName,
+			duration_ms: null,
+			popularity: null,
+			release_date: null,
+		});
+
+		await addRecentPlay(dbExecutor, play.trackId, play.playedAt.getTime());
+		persisted++;
+	}
+
+	return persisted;
+}
+
+/**
+ * Get local play counts by artist for chart display.
+ *
+ * @param dbExecutor - Database executor.
+ * @param since      - Only count plays after this Unix timestamp (ms).
+ * @returns Chart data points sorted by play count descending.
+ */
+export async function getLocalArtistCounts(
+	dbExecutor: DbExecutor,
+	since: number = 0,
+): Promise<ChartDataPoint[]> {
+	const rows = await countPlaysByArtist(dbExecutor, since);
+	return rows.map((r) => ({ label: r.artist_name, value: r.play_count }));
+}
+
+/**
+ * Get local play counts by hour for chart display.
+ *
+ * Returns 24 data points (one per hour), filling in zeros for hours
+ * with no plays.
+ *
+ * @param dbExecutor - Database executor.
+ * @param since      - Only count plays after this Unix timestamp (ms).
+ * @returns 24 chart data points, one per hour.
+ */
+export async function getLocalHourCounts(
+	dbExecutor: DbExecutor,
+	since: number = 0,
+): Promise<ChartDataPoint[]> {
+	const rows = await countPlaysByHour(dbExecutor, since);
+	const hourMap = new Map(rows.map((r) => [r.hour, r.play_count]));
+
+	return Array.from({ length: 24 }, (_, hour) => ({
+		label: `${hour.toString().padStart(2, '0')}:00`,
+		value: hourMap.get(hour) ?? 0,
+	}));
 }
 
 // ---------------------------------------------------------------------------

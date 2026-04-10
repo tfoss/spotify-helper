@@ -2,8 +2,19 @@
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import { authStore } from '$lib/stores/auth';
+	import { dbStore } from '$lib/stores/db';
 	import { SpotifyClient } from '$lib/spotify/client';
-	import { getTopArtists, getTopTracks, getRecentlyPlayed, aggregateByArtist, aggregateByHour } from '$lib/analytics/index';
+	import {
+		getTopArtists,
+		getTopTracks,
+		getRecentlyPlayed,
+		aggregateByArtist,
+		aggregateByHour,
+		persistRecentPlays,
+		getLocalRecentPlays,
+		getLocalArtistCounts,
+		getLocalHourCounts,
+	} from '$lib/analytics/index';
 	import { createTopArtistsChart, createTopTracksChart, createActivityOverTimeChart } from '$lib/charts/config';
 	import type { TimeRange, TopArtistsResult, TopTracksResult, RecentActivityResult } from '$lib/analytics/types';
 	import type { ChartConfig } from '$lib/charts/types';
@@ -11,7 +22,7 @@
 	import DataSourceBadge from '$components/shared/DataSourceBadge.svelte';
 	import ChartContainer from '$components/charts/ChartContainer.svelte';
 
-	type Tab = 'artists' | 'tracks' | 'recent';
+	type Tab = 'artists' | 'tracks' | 'recent' | 'history';
 
 	let activeTab = $state<Tab>('artists');
 	let timeRange = $state<TimeRange>('medium_term');
@@ -22,10 +33,22 @@
 	let artistsResult = $state<TopArtistsResult | null>(null);
 	let tracksResult = $state<TopTracksResult | null>(null);
 	let recentResult = $state<RecentActivityResult | null>(null);
+	let historyResult = $state<RecentActivityResult | null>(null);
 
 	let artistsChart = $state<ChartConfig | null>(null);
 	let tracksChart = $state<ChartConfig | null>(null);
 	let activityChart = $state<ChartConfig | null>(null);
+	let historyChart = $state<ChartConfig | null>(null);
+
+	/** Time window options for local history queries (in milliseconds). */
+	const HISTORY_WINDOWS = [
+		{ label: '24h', ms: 24 * 60 * 60 * 1000 },
+		{ label: '7d', ms: 7 * 24 * 60 * 60 * 1000 },
+		{ label: '30d', ms: 30 * 24 * 60 * 60 * 1000 },
+		{ label: 'All', ms: 0 },
+	] as const;
+
+	let historyWindow = $state(HISTORY_WINDOWS[1]); // default: 7d
 
 	function getClient(): SpotifyClient | null {
 		const state = get(authStore);
@@ -86,8 +109,36 @@
 			recentResult = await getRecentlyPlayed(client);
 			const hourData = aggregateByHour(recentResult.plays);
 			activityChart = createActivityOverTimeChart(hourData);
+
+			// Persist to local DB if available
+			const { executor } = get(dbStore);
+			if (executor) {
+				await persistRecentPlays(recentResult.plays, executor);
+			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load recent activity';
+		} finally {
+			loading = false;
+		}
+	}
+
+	async function fetchHistory() {
+		const { executor } = get(dbStore);
+		if (!executor) {
+			error = 'Database not initialized';
+			return;
+		}
+
+		loading = true;
+		error = null;
+		try {
+			const since = historyWindow.ms > 0 ? Date.now() - historyWindow.ms : 0;
+			historyResult = await getLocalRecentPlays(executor, since);
+
+			const hourData = await getLocalHourCounts(executor, since);
+			historyChart = createActivityOverTimeChart(hourData);
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to load history';
 		} finally {
 			loading = false;
 		}
@@ -96,7 +147,8 @@
 	async function loadData() {
 		if (activeTab === 'artists') await fetchArtists();
 		else if (activeTab === 'tracks') await fetchTracks();
-		else await fetchRecent();
+		else if (activeTab === 'recent') await fetchRecent();
+		else await fetchHistory();
 	}
 
 	function handleTabChange(tab: Tab) {
@@ -106,12 +158,17 @@
 
 	function handleTimeRangeChange(range: TimeRange) {
 		timeRange = range;
-		if (activeTab !== 'recent') loadData();
+		if (activeTab !== 'recent' && activeTab !== 'history') loadData();
 	}
 
 	function handleTopNChange(n: number) {
 		topN = n;
 		loadData();
+	}
+
+	function handleHistoryWindowChange(window: typeof HISTORY_WINDOWS[number]) {
+		historyWindow = window;
+		fetchHistory();
 	}
 
 	onMount(() => {
@@ -123,6 +180,7 @@
 		{ id: 'artists', label: 'Top Artists' },
 		{ id: 'tracks', label: 'Top Tracks' },
 		{ id: 'recent', label: 'Recent Activity' },
+		{ id: 'history', label: 'Local History' },
 	];
 
 	const topNOptions = [5, 10, 20];
@@ -269,6 +327,46 @@
 			</div>
 		{:else}
 			<p class="py-20 text-center text-gray-500">No recent listening activity available.</p>
+		{/if}
+
+	{:else if activeTab === 'history'}
+		<div class="flex items-center gap-2 text-sm text-gray-400">
+			<span>Time window:</span>
+			{#each HISTORY_WINDOWS as window}
+				<button
+					class="rounded px-2 py-1 {historyWindow === window
+						? 'bg-green-600 text-white'
+						: 'bg-gray-800 text-gray-400 hover:text-white'}"
+					onclick={() => handleHistoryWindowChange(window)}
+				>
+					{window.label}
+				</button>
+			{/each}
+		</div>
+
+		{#if historyResult && historyResult.plays.length > 0}
+			<div class="flex items-center gap-2">
+				<DataSourceBadge source="local" />
+				<span class="text-xs text-gray-500">{historyResult.totalCount} plays</span>
+			</div>
+			<div class="grid gap-6 lg:grid-cols-2">
+				<div class="space-y-3">
+					{#each historyResult.plays as play}
+						<div class="rounded-lg bg-gray-900 p-3">
+							<p class="font-medium text-white">{play.trackName}</p>
+							<p class="text-sm text-gray-400">{play.artistName} &middot; {play.albumName}</p>
+							<p class="mt-1 text-xs text-gray-500">
+								{play.playedAt.toLocaleString()}
+							</p>
+						</div>
+					{/each}
+				</div>
+				{#if historyChart}
+					<ChartContainer config={historyChart} />
+				{/if}
+			</div>
+		{:else}
+			<p class="py-20 text-center text-gray-500">No local history available. Visit the Recent Activity tab to sync data from Spotify.</p>
 		{/if}
 	{/if}
 </div>
