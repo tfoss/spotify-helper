@@ -21,6 +21,9 @@
 	import TimeRangeSelector from '$components/shared/TimeRangeSelector.svelte';
 	import DataSourceBadge from '$components/shared/DataSourceBadge.svelte';
 	import ChartContainer from '$components/charts/ChartContainer.svelte';
+	import SkeletonLoader from '$components/shared/SkeletonLoader.svelte';
+	import ErrorMessage from '$components/shared/ErrorMessage.svelte';
+	import EmptyState from '$components/shared/EmptyState.svelte';
 
 	type Tab = 'artists' | 'tracks' | 'recent' | 'history';
 
@@ -262,19 +265,21 @@
 			</button>
 		</div>
 	{:else if loading}
-		<div class="flex items-center justify-center py-20">
-			<div class="h-10 w-10 animate-spin rounded-full border-4 border-green-400 border-t-transparent"></div>
+		<div class="space-y-4">
+			<div class="flex items-center gap-3">
+				<div class="h-5 w-5 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
+				<span class="text-sm text-gray-400">
+					{#if activeTab === 'artists'}Loading top artists...
+					{:else if activeTab === 'tracks'}Loading top tracks...
+					{:else if activeTab === 'recent'}Loading recent activity...
+					{:else}Loading local history...
+					{/if}
+				</span>
+			</div>
+			<SkeletonLoader lines={topN > 5 ? 5 : topN} showChart={true} />
 		</div>
 	{:else if error}
-		<div class="py-10 text-center">
-			<p class="text-red-400">{error}</p>
-			<button
-				onclick={loadData}
-				class="mt-4 rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-			>
-				Retry
-			</button>
-		</div>
+		<ErrorMessage message={error} onretry={loadData} />
 	{:else if activeTab === 'artists'}
 		{#if artistsResult && artistsResult.items.length > 0}
 			<div class="flex items-center gap-2">
@@ -302,7 +307,11 @@
 				{/if}
 			</div>
 		{:else}
-			<p class="py-20 text-center text-gray-500">No artist data available for this time range.</p>
+			<EmptyState
+				icon="🎤"
+				title="No artist data available"
+				description="Try selecting a different time range."
+			/>
 		{/if}
 
 	{:else if activeTab === 'tracks'}
@@ -325,7 +334,11 @@
 				{/if}
 			</div>
 		{:else}
-			<p class="py-20 text-center text-gray-500">No track data available for this time range.</p>
+			<EmptyState
+				icon="🎵"
+				title="No track data available"
+				description="Try selecting a different time range."
+			/>
 		{/if}
 
 	{:else if activeTab === 'recent'}
@@ -350,7 +363,11 @@
 				{/if}
 			</div>
 		{:else}
-			<p class="py-20 text-center text-gray-500">No recent listening activity available.</p>
+			<EmptyState
+				icon="🎧"
+				title="No recent listening activity"
+				description="Play some music on Spotify, then come back to see your activity."
+			/>
 		{/if}
 
 	{:else if activeTab === 'history'}
@@ -390,7 +407,13 @@
 				{/if}
 			</div>
 		{:else}
-			<p class="py-20 text-center text-gray-500">No local history available. Visit the Recent Activity tab to sync data from Spotify.</p>
+			<EmptyState
+				icon="📊"
+				title="No local history yet"
+				description="Visit the Recent Activity tab to sync plays from Spotify. They'll be stored locally for historical tracking."
+				actionLabel="Go to Recent Activity"
+				onaction={() => handleTabChange('recent')}
+			/>
 		{/if}
 	{/if}
 </div>
