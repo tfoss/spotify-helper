@@ -198,7 +198,7 @@
 	</div>
 
 	<!-- Tab navigation -->
-	<div class="flex gap-1 border-b border-gray-800">
+	<div class="flex items-center gap-1 border-b border-gray-800">
 		{#each tabs as tab}
 			<button
 				class="border-b-2 px-4 py-3 text-sm font-medium transition-colors {activeTab === tab.id
@@ -209,6 +209,12 @@
 				{tab.label}
 			</button>
 		{/each}
+		<a
+			href="/analytics/era"
+			class="ml-auto rounded-md px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+		>
+			Era Heatmap &rarr;
+		</a>
 	</div>
 
 	<!-- TopN selector for artists/tracks -->
