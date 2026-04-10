@@ -166,7 +166,7 @@ SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here   # Worker/server only
 
 # ── Redirect URIs ────────────────────────────────────────────────
 # Local development
-SPOTIFY_REDIRECT_URI_LOCAL=http://localhost:5173/auth/callback
+SPOTIFY_REDIRECT_URI_LOCAL=http://127.0.0.1:5174/auth/callback
 
 # Cloudflare Pages production (set this after your Pages project is created)
 SPOTIFY_REDIRECT_URI_PROD=https://your-app.pages.dev/auth/callback
@@ -232,7 +232,7 @@ The Worker exposes **only these two endpoints**. It does not proxy any Spotify A
 #### Redirect URI configuration
 
 Both URIs below must be registered in the Spotify Developer Dashboard:
-- `http://localhost:5173/auth/callback` — local dev
+- `http://127.0.0.1:5174/auth/callback` — local dev
 - `https://your-app.pages.dev/auth/callback` — production
 
 The active redirect URI is selected at runtime based on `APP_ENV`.

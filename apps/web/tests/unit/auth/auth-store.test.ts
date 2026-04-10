@@ -23,7 +23,7 @@ vi.mock('../../../src/lib/config', () => ({
 		authWorkerUrl: 'https://auth-worker.test',
 		appEnv: 'local'
 	},
-	getRedirectUri: () => 'http://localhost:5173/auth/callback'
+	getRedirectUri: () => 'http://127.0.0.1:5174/auth/callback'
 }));
 
 import { authStore } from '../../../src/lib/stores/auth';
@@ -101,13 +101,13 @@ describe('handleCallback — token exchange', () => {
 
 		expect(mockFetch).toHaveBeenCalledOnce();
 		const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
-		expect(url).toBe('https://auth-worker.test/token');
+		expect(url).toBe('https://auth-worker.test/exchange');
 		expect(options.method).toBe('POST');
 
 		const body = JSON.parse(options.body as string);
 		expect(body.code).toBe('auth-code-123');
 		expect(body.code_verifier).toBe('my-verifier');
-		expect(body.redirect_uri).toBe('http://localhost:5173/auth/callback');
+		expect(body.redirect_uri).toBe('http://127.0.0.1:5174/auth/callback');
 	});
 
 	it('sets isAuthenticated and accessToken on success', async () => {

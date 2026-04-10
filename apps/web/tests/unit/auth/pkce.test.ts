@@ -80,7 +80,7 @@ describe('buildAuthUrl', () => {
 	it('returns a valid Spotify authorize URL', () => {
 		const url = buildAuthUrl(
 			'test-client-id',
-			'http://localhost:5173/auth/callback',
+			'http://127.0.0.1:5174/auth/callback',
 			'test-challenge',
 			'test-state',
 			['user-read-private', 'user-read-email']

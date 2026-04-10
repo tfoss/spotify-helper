@@ -24,25 +24,80 @@ All data lives in your browser (wa-sqlite + OPFS). Nothing is sent to a third-pa
 
 ## Local development
 
-1. Clone the repo and install dependencies:
-   ```
-   git clone https://github.com/tfoss/spotify-helper.git
-   cd spotify-helper
-   npm install
-   ```
+### Prerequisites
 
-2. Copy `.env.example` to `.env` and fill in your credentials:
-   ```
-   cp .env.example .env
-   ```
-   You need `PUBLIC_SPOTIFY_CLIENT_ID` from the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
+- Node.js 18+
+- A [Spotify Developer](https://developer.spotify.com/dashboard) app with a Client ID and Client Secret
 
-3. In the Spotify Dashboard, register `http://localhost:5173/auth/callback` as a redirect URI for your app.
+### 1. Install dependencies
 
-4. Start the dev server:
-   ```
-   npm run dev
-   ```
+```
+git clone https://github.com/tfoss/spotify-helper.git
+cd spotify-helper
+npm install
+cd workers/auth && npm install && cd ../..
+```
+
+### 2. Configure environment
+
+Copy the example env file to the repo root and fill in your Spotify credentials:
+
+```
+cp .env.example .env
+```
+
+Required values in `.env`:
+
+| Variable | Where to find it |
+|----------|-----------------|
+| `PUBLIC_SPOTIFY_CLIENT_ID` | Spotify Developer Dashboard → your app → Client ID |
+| `SPOTIFY_CLIENT_SECRET` | Spotify Developer Dashboard → your app → Client Secret |
+| `PUBLIC_AUTH_WORKER_URL` | Set to `http://127.0.0.1:8787` for local dev |
+| `PUBLIC_APP_ENV` | Set to `local` |
+
+The web app reads `.env` via a symlink at `apps/web/.env` → `../../.env`. If that symlink is missing, create it:
+
+```
+ln -s ../../.env apps/web/.env
+```
+
+### 3. Configure Spotify redirect URI
+
+In the Spotify Developer Dashboard, add this as a redirect URI for your app:
+
+```
+http://127.0.0.1:5174/auth/callback
+```
+
+> **Important:** Spotify requires `127.0.0.1` (the IP literal), not `localhost`. Using `localhost` will be rejected.
+
+### 4. Set up the auth worker's local secrets
+
+Create `workers/auth/.dev.vars` with your Spotify credentials (this file is gitignored):
+
+```
+SPOTIFY_CLIENT_ID=<your client id>
+SPOTIFY_CLIENT_SECRET=<your client secret>
+ALLOWED_ORIGIN=http://127.0.0.1:5174
+```
+
+### 5. Start the dev servers
+
+You need **two terminals**:
+
+**Terminal 1 — Auth worker** (runs on port 8787):
+```
+cd workers/auth
+npm run dev
+```
+
+**Terminal 2 — Web app** (runs on port 5174):
+```
+cd apps/web
+npm run dev
+```
+
+Then open `http://127.0.0.1:5174` in your browser and click "Connect with Spotify".
 
 ## Project structure
 

@@ -22,5 +22,5 @@ export function getRedirectUri(): string {
 	if (config.appEnv === 'production') {
 		return `${window.location.origin}/auth/callback`;
 	}
-	return 'http://localhost:5173/auth/callback';
+	return 'http://127.0.0.1:5174/auth/callback';
 }
