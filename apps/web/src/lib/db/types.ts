@@ -47,6 +47,12 @@ export interface RecentPlayRow {
   played_at: number;
 }
 
+/** A genre tag associated with an artist. */
+export interface ArtistGenreRow {
+  artist_id: string;
+  genre: string;
+}
+
 /** Internal migration-tracking row. */
 export interface MigrationRow {
   version: number;
