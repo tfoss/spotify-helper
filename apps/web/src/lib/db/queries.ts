@@ -239,3 +239,92 @@ export async function getRecentPlays(
   const rows = await exec(sql, [since, limit]);
   return rows as unknown as RecentPlayRow[];
 }
+
+// ---------------------------------------------------------------------------
+// Recent plays with track details (JOIN)
+// ---------------------------------------------------------------------------
+
+/** A recent play row enriched with track metadata. */
+export interface RecentPlayWithTrack {
+  id: number;
+  track_id: string;
+  played_at: number;
+  track_name: string;
+  artist_name: string;
+  album_name: string;
+}
+
+/**
+ * Retrieve recent plays joined with track metadata.
+ *
+ * @param exec  - Database executor.
+ * @param since - Only return plays after this Unix timestamp (ms). Defaults to 0.
+ * @param limit - Maximum number of rows to return. Defaults to 100.
+ * @returns Recent play rows with track details, newest first.
+ */
+export async function getRecentPlaysWithTracks(
+  exec: DbExecutor,
+  since: number = 0,
+  limit: number = 100,
+): Promise<RecentPlayWithTrack[]> {
+  const sql = `
+    SELECT rp.id, rp.track_id, rp.played_at,
+           t.name AS track_name, t.artist_name, t.album_name
+    FROM recent_plays rp
+    INNER JOIN tracks t ON t.id = rp.track_id
+    WHERE rp.played_at > ?
+    ORDER BY rp.played_at DESC
+    LIMIT ?;`;
+
+  const rows = await exec(sql, [since, limit]);
+  return rows as unknown as RecentPlayWithTrack[];
+}
+
+/**
+ * Count plays per artist from the local recent_plays table within a time window.
+ *
+ * @param exec  - Database executor.
+ * @param since - Only count plays after this Unix timestamp (ms).
+ * @returns Array of { artist_name, play_count } sorted by play_count descending.
+ */
+export async function countPlaysByArtist(
+  exec: DbExecutor,
+  since: number = 0,
+): Promise<{ artist_name: string; play_count: number }[]> {
+  const sql = `
+    SELECT t.artist_name, COUNT(*) AS play_count
+    FROM recent_plays rp
+    INNER JOIN tracks t ON t.id = rp.track_id
+    WHERE rp.played_at > ?
+    GROUP BY t.artist_name
+    ORDER BY play_count DESC;`;
+
+  const rows = await exec(sql, [since]);
+  return rows as unknown as { artist_name: string; play_count: number }[];
+}
+
+/**
+ * Count plays per hour-of-day from the local recent_plays table.
+ *
+ * Uses SQLite datetime functions to extract the hour from the played_at
+ * timestamp (stored as Unix ms).
+ *
+ * @param exec  - Database executor.
+ * @param since - Only count plays after this Unix timestamp (ms).
+ * @returns Array of { hour, play_count } for hours that have plays.
+ */
+export async function countPlaysByHour(
+  exec: DbExecutor,
+  since: number = 0,
+): Promise<{ hour: number; play_count: number }[]> {
+  const sql = `
+    SELECT CAST(strftime('%H', played_at / 1000, 'unixepoch', 'localtime') AS INTEGER) AS hour,
+           COUNT(*) AS play_count
+    FROM recent_plays
+    WHERE played_at > ?
+    GROUP BY hour
+    ORDER BY hour;`;
+
+  const rows = await exec(sql, [since]);
+  return rows as unknown as { hour: number; play_count: number }[];
+}
