@@ -26,7 +26,7 @@ import SQLiteESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
 // @ts-expect-error — same as above
 import * as SQLite from 'wa-sqlite';
 // @ts-expect-error — OPFS access-handle pool VFS for persistence
-import { OPFSAnyContextVFS } from 'wa-sqlite/src/examples/OPFSAnyContextVFS.js';
+import { AccessHandlePoolVFS } from 'wa-sqlite/src/examples/AccessHandlePoolVFS.js';
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -106,7 +106,7 @@ async function handleInit(dbName?: string): Promise<void> {
   const module = await SQLiteESMFactory();
   sqlite3 = SQLite.Factory(module);
 
-  const vfs = new OPFSAnyContextVFS();
+  const vfs = new AccessHandlePoolVFS();
   await vfs.isReady;
   SQLite.register_vfs(sqlite3, vfs);
 
