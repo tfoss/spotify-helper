@@ -23,14 +23,14 @@
 		<div class="flex gap-2">
 			<input
 				bind:value={query}
-				on:input={handleInput}
+				oninput={handleInput}
 				type="text"
 				placeholder={mode === 'artist' ? 'Artist name...' : 'Track name...'}
 				class="flex-1 rounded-lg bg-gray-800 px-4 py-2 text-white placeholder-gray-500 outline-none ring-1 ring-gray-700 focus:ring-green-500"
 			/>
 			<select
 				bind:value={mode}
-				on:change={handleInput}
+				onchange={handleInput}
 				class="rounded-lg bg-gray-800 px-3 py-2 text-gray-300 outline-none ring-1 ring-gray-700"
 			>
 				<option value="track">Track</option>
@@ -42,7 +42,7 @@
 		{#if mode === 'both'}
 			<input
 				bind:value={artistQuery}
-				on:input={handleInput}
+				oninput={handleInput}
 				type="text"
 				placeholder="Artist name..."
 				class="w-full rounded-lg bg-gray-800 px-4 py-2 text-white placeholder-gray-500 outline-none ring-1 ring-gray-700 focus:ring-green-500"
