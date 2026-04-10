@@ -6,7 +6,7 @@
  */
 
 /** Current schema version. Bump when adding new migrations. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** Name of the SQLite database file stored in OPFS. */
 export const DB_NAME = 'spotify-helper.db';
@@ -71,6 +71,20 @@ export const CREATE_IDX_RECENT_PLAYS_PLAYED_AT = `
 CREATE INDEX IF NOT EXISTS idx_recent_plays_played_at ON recent_plays(played_at);`;
 
 // ---------------------------------------------------------------------------
+// V2: Artist genres
+// ---------------------------------------------------------------------------
+
+export const CREATE_ARTIST_GENRES = `
+CREATE TABLE IF NOT EXISTS artist_genres (
+  artist_id    TEXT NOT NULL,
+  genre        TEXT NOT NULL,
+  PRIMARY KEY (artist_id, genre)
+);`;
+
+export const CREATE_IDX_ARTIST_GENRES_GENRE = `
+CREATE INDEX IF NOT EXISTS idx_artist_genres_genre ON artist_genres(genre);`;
+
+// ---------------------------------------------------------------------------
 // Aggregated schema — all statements in application order
 // ---------------------------------------------------------------------------
 
@@ -84,4 +98,10 @@ export const SCHEMA_V1_STATEMENTS: readonly string[] = [
   CREATE_IDX_TRACKS_ARTIST_LOWER,
   CREATE_IDX_PLAYLIST_TRACKS_TRACK,
   CREATE_IDX_RECENT_PLAYS_PLAYED_AT,
+] as const;
+
+/** DDL statements for schema version 2: artist genres. */
+export const SCHEMA_V2_STATEMENTS: readonly string[] = [
+  CREATE_ARTIST_GENRES,
+  CREATE_IDX_ARTIST_GENRES_GENRE,
 ] as const;
