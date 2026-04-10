@@ -59,6 +59,23 @@
 		);
 	}
 
+	/** Map time range values to human-readable labels for chart titles. */
+	const TIME_RANGE_LABELS: Record<TimeRange, string> = {
+		short_term: 'Last 4 Weeks',
+		medium_term: 'Last 6 Months',
+		long_term: 'All Time',
+	};
+
+	/** Whether the active tab uses the Spotify time range selector. */
+	function tabUsesTimeRange(tab: Tab): boolean {
+		return tab === 'artists' || tab === 'tracks';
+	}
+
+	/** Whether the active tab uses the top-N selector. */
+	function tabUsesTopN(tab: Tab): boolean {
+		return tab === 'artists' || tab === 'tracks';
+	}
+
 	async function fetchArtists() {
 		const client = getClient();
 		if (!client) return;
@@ -158,7 +175,12 @@
 
 	function handleTimeRangeChange(range: TimeRange) {
 		timeRange = range;
-		if (activeTab !== 'recent' && activeTab !== 'history') loadData();
+		// Invalidate cached results so stale data is not shown
+		artistsResult = null;
+		artistsChart = null;
+		tracksResult = null;
+		tracksChart = null;
+		if (tabUsesTimeRange(activeTab)) loadData();
 	}
 
 	function handleTopNChange(n: number) {
@@ -190,7 +212,7 @@
 	<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 		<h1 class="text-3xl font-bold">Analytics</h1>
 
-		{#if activeTab !== 'recent'}
+		{#if tabUsesTimeRange(activeTab)}
 			<div class="flex items-center gap-4">
 				<TimeRangeSelector value={timeRange} onchange={handleTimeRangeChange} />
 			</div>
@@ -212,7 +234,7 @@
 	</div>
 
 	<!-- TopN selector for artists/tracks -->
-	{#if activeTab !== 'recent'}
+	{#if tabUsesTopN(activeTab)}
 		<div class="flex items-center gap-2 text-sm text-gray-400">
 			<span>Show top</span>
 			{#each topNOptions as n}
@@ -257,6 +279,7 @@
 		{#if artistsResult && artistsResult.items.length > 0}
 			<div class="flex items-center gap-2">
 				<DataSourceBadge source={artistsResult.source} />
+				<span class="text-xs text-gray-500">{TIME_RANGE_LABELS[artistsResult.timeRange]}</span>
 			</div>
 			<div class="grid gap-6 lg:grid-cols-2">
 				<div class="space-y-3">
@@ -286,6 +309,7 @@
 		{#if tracksResult && tracksResult.items.length > 0}
 			<div class="flex items-center gap-2">
 				<DataSourceBadge source={tracksResult.source} />
+				<span class="text-xs text-gray-500">{TIME_RANGE_LABELS[tracksResult.timeRange]}</span>
 			</div>
 			<div class="grid gap-6 lg:grid-cols-2">
 				<div class="space-y-3">
