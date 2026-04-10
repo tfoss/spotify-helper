@@ -234,12 +234,20 @@
 				{tab.label}
 			</button>
 		{/each}
-		<a
-			href="/analytics/era"
-			class="ml-auto rounded-md px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
-		>
-			Era Heatmap &rarr;
-		</a>
+		<div class="ml-auto flex gap-1">
+			<a
+				href="/analytics/genre"
+				class="rounded-md px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+			>
+				Genres &rarr;
+			</a>
+			<a
+				href="/analytics/era"
+				class="rounded-md px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+			>
+				Era Heatmap &rarr;
+			</a>
+		</div>
 	</div>
 
 	<!-- TopN selector for artists/tracks -->

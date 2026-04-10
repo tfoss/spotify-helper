@@ -29,6 +29,14 @@ export interface SpotifyArtist {
 	name: string;
 }
 
+export interface SpotifyFullArtist {
+	id: string;
+	name: string;
+	genres: string[];
+	images: SpotifyImage[];
+	popularity: number;
+}
+
 export interface SpotifyAlbum {
 	name: string;
 	release_date: string;

@@ -3,6 +3,7 @@ import type {
 	SpotifyPlaylist,
 	SpotifyPlaylistTrack,
 	SpotifyTrack,
+	SpotifyFullArtist,
 	SpotifyPaginated,
 	SpotifyTopItems,
 	SpotifyRecentlyPlayed,
@@ -108,6 +109,31 @@ export class SpotifyClient {
 		return this.fetch<SpotifyTopItems<SpotifyTrack>>(
 			`/me/top/tracks?time_range=${timeRange}&limit=${limit}`,
 		);
+	}
+
+	/**
+	 * Get full artist objects by IDs. Spotify allows up to 50 at a time.
+	 */
+	getArtists(ids: string[]): Promise<{ artists: SpotifyFullArtist[] }> {
+		return this.fetch<{ artists: SpotifyFullArtist[] }>(
+			`/artists?ids=${ids.join(',')}`,
+		);
+	}
+
+	/**
+	 * Get full artist objects in batches of 50.
+	 */
+	async getAllArtists(ids: string[]): Promise<SpotifyFullArtist[]> {
+		const artists: SpotifyFullArtist[] = [];
+		const uniqueIds = [...new Set(ids)];
+
+		for (let i = 0; i < uniqueIds.length; i += 50) {
+			const batch = uniqueIds.slice(i, i + 50);
+			const response = await this.getArtists(batch);
+			artists.push(...response.artists.filter(Boolean));
+		}
+
+		return artists;
 	}
 
 	getRecentlyPlayed(limit = 50, after?: number): Promise<SpotifyRecentlyPlayed> {
