@@ -122,15 +122,30 @@
 			<p class="mt-1 text-sm text-gray-600">Sync your Spotify playlists to start searching.</p>
 			{#if $authStore.isAuthenticated}
 				{#if $syncStore.isSyncing}
-					<div class="mt-4 flex items-center justify-center gap-2">
-						<div class="h-4 w-4 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
-						<span class="text-sm text-gray-400">
-							{#if $syncStore.progress}
-								Syncing... {$syncStore.progress.current}/{$syncStore.progress.total}
+					<div class="mt-4 mx-auto max-w-xs space-y-2">
+						{#if $syncStore.progress}
+							{#if $syncStore.progress.phase === 'fetching_playlists'}
+								<div class="flex items-center justify-center gap-2">
+									<div class="h-4 w-4 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
+									<span class="text-sm text-gray-400">Fetching playlists...</span>
+								</div>
 							{:else}
-								Syncing...
+								<p class="text-sm text-gray-400 text-center">
+									Syncing playlist {$syncStore.progress.current} of {$syncStore.progress.total}...
+								</p>
+								<div class="h-2 w-full rounded-full bg-gray-800">
+									<div
+										class="h-2 rounded-full bg-green-500 transition-all duration-300"
+										style="width: {$syncStore.progress.total > 0 ? Math.round(($syncStore.progress.current / $syncStore.progress.total) * 100) : 0}%"
+									></div>
+								</div>
 							{/if}
-						</span>
+						{:else}
+							<div class="flex items-center justify-center gap-2">
+								<div class="h-4 w-4 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
+								<span class="text-sm text-gray-400">Syncing...</span>
+							</div>
+						{/if}
 					</div>
 				{:else}
 					<button
