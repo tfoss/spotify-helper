@@ -106,7 +106,7 @@ async function handleInit(dbName?: string): Promise<void> {
   const module = await SQLiteESMFactory();
   sqlite3 = SQLite.Factory(module);
 
-  const vfs = new AccessHandlePoolVFS();
+  const vfs = new AccessHandlePoolVFS('.wa-sqlite');
   await vfs.isReady;
   SQLite.register_vfs(sqlite3, vfs);
 
