@@ -37,10 +37,12 @@
 	});
 
 	// Auto-sync when both auth and DB are ready
-	$: if ($authStore.isAuthenticated && $dbStore.isReady && !hasSyncedThisSession && !$syncStore.isSyncing) {
-		hasSyncedThisSession = true;
-		triggerSync();
-	}
+	$effect(() => {
+		if ($authStore.isAuthenticated && $dbStore.isReady && !hasSyncedThisSession && !$syncStore.isSyncing) {
+			hasSyncedThisSession = true;
+			triggerSync();
+		}
+	});
 
 	function isActive(path: string): boolean {
 		const current = $page.url.pathname;

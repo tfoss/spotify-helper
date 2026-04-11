@@ -17,10 +17,10 @@
 	let playlistCount = $state<number | null>(null);
 	let checkingDb = $state(true);
 
-	$: dbReady = $dbStore.isReady;
-	$: dbInitializing = $dbStore.isInitializing;
-	$: dbError = $dbStore.error;
-	$: hasPlaylists = playlistCount !== null && playlistCount > 0;
+	let dbReady = $derived($dbStore.isReady);
+	let dbInitializing = $derived($dbStore.isInitializing);
+	let dbError = $derived($dbStore.error);
+	let hasPlaylists = $derived(playlistCount !== null && playlistCount > 0);
 
 	async function checkPlaylistCount() {
 		const { executor } = get(dbStore);
@@ -59,9 +59,11 @@
 	}
 
 	// Check playlist count when DB becomes ready
-	$: if (dbReady) {
-		checkPlaylistCount();
-	}
+	$effect(() => {
+		if (dbReady) {
+			checkPlaylistCount();
+		}
+	});
 </script>
 
 <div class="mx-auto max-w-3xl px-4 py-10">
