@@ -7,6 +7,9 @@
  *   - `init`  : Open (or create) the database and run pending migrations.
  *   - `exec`  : Execute a SQL statement with optional bind parameters.
  *   - `close` : Close the database connection.
+ *
+ * Uses wa-sqlite v1.0.0 API where Factory() returns an API object with
+ * all sqlite methods as instance methods.
  */
 
 import type {
@@ -23,7 +26,7 @@ import { DB_NAME } from './schema.js';
 // ---------------------------------------------------------------------------
 // @ts-expect-error — wa-sqlite ships as plain JS; types come from the project
 import SQLiteESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
-// @ts-expect-error — same as above
+// @ts-expect-error — constants (SQLITE_ROW, SQLITE_OPEN_*, etc.)
 import * as SQLite from 'wa-sqlite';
 // @ts-expect-error — OPFS access-handle pool VFS for persistence
 import { AccessHandlePoolVFS } from 'wa-sqlite/src/examples/AccessHandlePoolVFS.js';
@@ -32,7 +35,10 @@ import { AccessHandlePoolVFS } from 'wa-sqlite/src/examples/AccessHandlePoolVFS.
 // Module state
 // ---------------------------------------------------------------------------
 
-let sqlite3: number | null = null;
+/** The wa-sqlite API object returned by Factory(). Has all sqlite methods. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let sqlite3: any = null;
+/** The open database handle (number). */
 let db: number | null = null;
 
 // ---------------------------------------------------------------------------
@@ -42,30 +48,35 @@ let db: number | null = null;
 /**
  * Execute a single SQL statement and return result rows as plain objects.
  *
- * @param sqliteApi - The wa-sqlite API handle.
- * @param dbHandle  - The open database handle.
- * @param sql       - SQL string to execute.
- * @param params    - Optional bind parameters.
+ * In wa-sqlite v1.0.0, all sqlite functions are methods on the API object
+ * returned by Factory(). Constants (SQLITE_ROW, etc.) remain on the
+ * namespace import.
+ *
+ * @param api      - The wa-sqlite API object (from Factory()).
+ * @param dbHandle - The open database handle.
+ * @param sql      - SQL string to execute.
+ * @param params   - Optional bind parameters.
  * @returns Array of row objects keyed by column name.
  */
 function execSql(
-  sqliteApi: typeof SQLite,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  api: any,
   dbHandle: number,
   sql: string,
   params: SqlParam[] = [],
 ): Record<string, SqlParam>[] {
   const rows: Record<string, SqlParam>[] = [];
 
-  for (const stmt of sqliteApi.statements(dbHandle, sql)) {
+  for (const stmt of api.statements(dbHandle, sql)) {
     if (params.length > 0) {
-      sqliteApi.bind_collection(stmt, params);
+      api.bind_collection(stmt, params);
     }
 
-    const columnNames: string[] = sqliteApi.column_names(stmt);
+    const columnNames: string[] = api.column_names(stmt);
 
-    while (sqliteApi.step(stmt) === SQLite.SQLITE_ROW) {
+    while (api.step(stmt) === SQLite.SQLITE_ROW) {
       const row: Record<string, SqlParam> = {};
-      const values = sqliteApi.row(stmt);
+      const values = api.row(stmt);
       for (let i = 0; i < columnNames.length; i++) {
         row[columnNames[i]] = values[i] as SqlParam;
       }
@@ -88,7 +99,7 @@ function makeExecutor(): (
     if (sqlite3 === null || db === null) {
       throw new Error('Database is not initialised. Send an "init" message first.');
     }
-    return execSql(SQLite, db, sql, params);
+    return execSql(sqlite3, db, sql, params);
   };
 }
 
@@ -108,19 +119,18 @@ async function handleInit(dbName?: string): Promise<void> {
 
   const vfs = new AccessHandlePoolVFS('.wa-sqlite');
   await vfs.isReady;
-  SQLite.register_vfs(sqlite3, vfs);
+  sqlite3.vfs_register(vfs, true);
 
-  db = await SQLite.open_v2(
-    sqlite3,
+  db = await sqlite3.open_v2(
     dbName ?? DB_NAME,
     SQLite.SQLITE_OPEN_CREATE | SQLite.SQLITE_OPEN_READWRITE,
     vfs.name,
   );
 
   // Enable WAL mode for better concurrent read performance.
-  execSql(SQLite, db, 'PRAGMA journal_mode=WAL;');
+  execSql(sqlite3, db, 'PRAGMA journal_mode=WAL;');
   // Enforce foreign keys.
-  execSql(SQLite, db, 'PRAGMA foreign_keys=ON;');
+  execSql(sqlite3, db, 'PRAGMA foreign_keys=ON;');
 
   // Run any outstanding schema migrations.
   const executor = makeExecutor();
@@ -143,7 +153,7 @@ async function handleExec(
  */
 function handleClose(): void {
   if (sqlite3 !== null && db !== null) {
-    SQLite.close(db);
+    sqlite3.close(db);
   }
   db = null;
   sqlite3 = null;
