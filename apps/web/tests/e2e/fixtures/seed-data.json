@@ -1,0 +1,38 @@
+{
+  "playlists": [
+    { "id": "pl-001", "name": "Chill Vibes", "owner": "testuser", "snapshot_id": "snap-001", "image_url": null, "synced_at": 1700000000000 },
+    { "id": "pl-002", "name": "Workout Mix", "owner": "testuser", "snapshot_id": "snap-002", "image_url": null, "synced_at": 1700000000000 },
+    { "id": "pl-003", "name": "Road Trip", "owner": "testuser", "snapshot_id": "snap-003", "image_url": null, "synced_at": 1700000000000 },
+    { "id": "pl-004", "name": "Focus Music", "owner": "testuser", "snapshot_id": "snap-004", "image_url": null, "synced_at": 1700000000000 }
+  ],
+  "tracks": [
+    { "id": "t-001", "name": "Bohemian Rhapsody", "artist_name": "Queen", "album_name": "A Night at the Opera", "duration_ms": 354000, "popularity": 95, "release_date": "1975-10-31" },
+    { "id": "t-002", "name": "Stairway to Heaven", "artist_name": "Led Zeppelin", "album_name": "Led Zeppelin IV", "duration_ms": 482000, "popularity": 90, "release_date": "1971-11-08" },
+    { "id": "t-003", "name": "Hotel California", "artist_name": "Eagles", "album_name": "Hotel California", "duration_ms": 390000, "popularity": 88, "release_date": "1977-02-22" },
+    { "id": "t-004", "name": "Blinding Lights", "artist_name": "The Weeknd", "album_name": "After Hours", "duration_ms": 200000, "popularity": 97, "release_date": "2020-03-20" },
+    { "id": "t-005", "name": "Lose Yourself", "artist_name": "Eminem", "album_name": "8 Mile", "duration_ms": 326000, "popularity": 85, "release_date": "2002-10-28" },
+    { "id": "t-006", "name": "Shape of You", "artist_name": "Ed Sheeran", "album_name": "Divide", "duration_ms": 233000, "popularity": 93, "release_date": "2017-01-06" },
+    { "id": "t-007", "name": "Smells Like Teen Spirit", "artist_name": "Nirvana", "album_name": "Nevermind", "duration_ms": 301000, "popularity": 87, "release_date": "1991-09-10" },
+    { "id": "t-008", "name": "Billie Jean", "artist_name": "Michael Jackson", "album_name": "Thriller", "duration_ms": 294000, "popularity": 92, "release_date": "1983-01-02" },
+    { "id": "t-009", "name": "Somebody That I Used to Know", "artist_name": "Gotye", "album_name": "Making Mirrors", "duration_ms": 244000, "popularity": 80, "release_date": "2011-07-05" },
+    { "id": "t-010", "name": "Rolling in the Deep", "artist_name": "Adele", "album_name": "21", "duration_ms": 228000, "popularity": 89, "release_date": "2010-11-29" },
+    { "id": "t-011", "name": "Don't Stop Me Now", "artist_name": "Queen", "album_name": "Jazz", "duration_ms": 210000, "popularity": 91, "release_date": "1979-01-26" },
+    { "id": "t-012", "name": "Watermelon Sugar", "artist_name": "Harry Styles", "album_name": "Fine Line", "duration_ms": 174000, "popularity": 86, "release_date": "2019-11-16" }
+  ],
+  "playlist_tracks": [
+    { "playlist_id": "pl-001", "track_id": "t-001", "added_at": 1700000000000, "position": 0 },
+    { "playlist_id": "pl-001", "track_id": "t-003", "added_at": 1700000000000, "position": 1 },
+    { "playlist_id": "pl-001", "track_id": "t-006", "added_at": 1700000000000, "position": 2 },
+    { "playlist_id": "pl-001", "track_id": "t-010", "added_at": 1700000000000, "position": 3 },
+    { "playlist_id": "pl-002", "track_id": "t-004", "added_at": 1700000000000, "position": 0 },
+    { "playlist_id": "pl-002", "track_id": "t-005", "added_at": 1700000000000, "position": 1 },
+    { "playlist_id": "pl-002", "track_id": "t-007", "added_at": 1700000000000, "position": 2 },
+    { "playlist_id": "pl-003", "track_id": "t-001", "added_at": 1700000000000, "position": 0 },
+    { "playlist_id": "pl-003", "track_id": "t-002", "added_at": 1700000000000, "position": 1 },
+    { "playlist_id": "pl-003", "track_id": "t-008", "added_at": 1700000000000, "position": 2 },
+    { "playlist_id": "pl-003", "track_id": "t-011", "added_at": 1700000000000, "position": 3 },
+    { "playlist_id": "pl-004", "track_id": "t-009", "added_at": 1700000000000, "position": 0 },
+    { "playlist_id": "pl-004", "track_id": "t-012", "added_at": 1700000000000, "position": 1 },
+    { "playlist_id": "pl-004", "track_id": "t-006", "added_at": 1700000000000, "position": 2 }
+  ]
+}
