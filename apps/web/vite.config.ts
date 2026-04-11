@@ -7,6 +7,12 @@ export default defineConfig({
 		port: 5174,
 		host: '127.0.0.1'
 	},
+	optimizeDeps: {
+		exclude: ['wa-sqlite']
+	},
+	worker: {
+		format: 'es'
+	},
 	test: {
 		include: ['tests/unit/**/*.{test,spec}.{js,ts}'],
 		environment: 'jsdom',
