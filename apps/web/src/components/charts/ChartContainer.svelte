@@ -5,9 +5,9 @@
 	import PieChart from './PieChart.svelte';
 	import HistogramChart from './HistogramChart.svelte';
 
-	export let config: ChartConfig;
+	let { config }: { config: ChartConfig } = $props();
 
-	let renderError: string | null = null;
+	let renderError = $state<string | null>(null);
 
 	function handleError(err: unknown): void {
 		renderError = err instanceof Error ? err.message : 'Failed to render chart';

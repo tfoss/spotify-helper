@@ -2,11 +2,11 @@
 	import { Chart, Svg, Arc, Tooltip } from 'layerchart';
 	import type { ChartConfig } from '$lib/charts/types';
 
-	export let config: ChartConfig;
+	let { config }: { config: ChartConfig } = $props();
 
-	$: data = config.data;
-	$: isDonut = config.type === 'donut';
-	$: total = data.reduce((sum, d) => sum + d.value, 0);
+	let data = $derived(config.data);
+	let isDonut = $derived(config.type === 'donut');
+	let total = $derived(data.reduce((sum, d) => sum + d.value, 0));
 
 	const COLORS = [
 		'#22c55e', '#3b82f6', '#a855f7', '#f59e0b',
