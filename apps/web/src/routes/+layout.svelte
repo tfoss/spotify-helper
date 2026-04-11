@@ -1,8 +1,11 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import { authStore } from '$lib/stores/auth';
 	import { dbStore } from '$lib/stores/db';
+	import { syncStore } from '$lib/stores/sync';
+	import { SpotifyClient } from '$lib/spotify/client';
 	import { page } from '$app/stores';
 	import SyncStatus from '$components/shared/SyncStatus.svelte';
 	import ErrorBoundary from '$components/shared/ErrorBoundary.svelte';
@@ -12,10 +15,32 @@
 	let { children } = $props();
 
 	let mobileMenuOpen = $state(false);
+	let hasSyncedThisSession = false;
+
+	function createClient(): SpotifyClient {
+		return new SpotifyClient(
+			() => get(authStore).accessToken,
+			() => authStore.refreshAccessToken()
+		);
+	}
+
+	function triggerSync() {
+		const auth = get(authStore);
+		const db = get(dbStore);
+		if (auth.isAuthenticated && db.isReady && db.executor) {
+			syncStore.startSync(createClient(), db.executor);
+		}
+	}
 
 	onMount(() => {
 		dbStore.initialize();
 	});
+
+	// Auto-sync when both auth and DB are ready
+	$: if ($authStore.isAuthenticated && $dbStore.isReady && !hasSyncedThisSession && !$syncStore.isSyncing) {
+		hasSyncedThisSession = true;
+		triggerSync();
+	}
 
 	function isActive(path: string): boolean {
 		const current = $page.url.pathname;
@@ -73,7 +98,7 @@
 
 				<div class="flex items-center gap-4">
 					{#if $authStore.isAuthenticated}
-						<SyncStatus />
+						<SyncStatus onSync={triggerSync} />
 					{/if}
 					<!-- CMD+K hint (desktop only) -->
 					<div class="hidden items-center gap-2 md:flex">
