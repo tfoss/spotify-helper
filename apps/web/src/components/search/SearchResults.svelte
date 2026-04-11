@@ -1,9 +1,15 @@
 <script lang="ts">
 	import type { SearchResults } from '$lib/search/types';
+	import HighlightText from './HighlightText.svelte';
 
-	export let results: SearchResults | null = null;
-	export let isSearching = false;
-	export let error: string | null = null;
+	interface Props {
+		results: SearchResults | null;
+		isSearching?: boolean;
+		error?: string | null;
+		searchQuery?: string;
+	}
+
+	let { results = null, isSearching = false, error = null, searchQuery = '' }: Props = $props();
 
 	const MATCH_BADGE: Record<string, string> = {
 		track: 'bg-green-900 text-green-300',
@@ -31,13 +37,15 @@
 				>
 					<div class="min-w-0 flex-1">
 						<div class="flex items-center gap-2">
-							<span class="truncate font-medium text-white">{item.trackName}</span>
+							<span class="truncate font-medium text-white">
+								<HighlightText text={item.trackName} query={searchQuery} />
+							</span>
 							<span class="shrink-0 rounded px-1.5 py-0.5 text-xs {MATCH_BADGE[item.matchType]}">
 								{item.matchType}
 							</span>
 						</div>
 						<p class="truncate text-sm text-gray-400">
-							{item.artistName} · {item.albumName}
+							<HighlightText text={item.artistName} query={searchQuery} /> · {item.albumName}
 						</p>
 					</div>
 					<div class="shrink-0 text-right">
