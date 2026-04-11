@@ -3,14 +3,14 @@
 	import { scaleBand, scaleLinear } from 'd3-scale';
 	import type { ChartConfig } from '$lib/charts/types';
 
-	export let config: ChartConfig;
+	let { config }: { config: ChartConfig } = $props();
 
-	$: data = config.data;
-	$: labels = data.map((d) => d.label);
-	$: maxValue = Math.max(...data.map((d) => d.value), 0);
+	let data = $derived(config.data);
+	let labels = $derived(data.map((d) => d.label));
+	let maxValue = $derived(Math.max(...data.map((d) => d.value), 0));
 
-	$: xScale = scaleBand().domain(labels).padding(0.05);
-	$: yScale = scaleLinear().domain([0, maxValue * 1.1]);
+	let xScale = $derived(scaleBand().domain(labels).padding(0.05));
+	let yScale = $derived(scaleLinear().domain([0, maxValue * 1.1]));
 </script>
 
 {#if data.length === 0}
