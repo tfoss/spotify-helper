@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Chart, Svg, Axis, Line, Tooltip } from 'layerchart';
+	import { Chart, Svg, Axis, Spline, Tooltip } from 'layerchart';
 	import { scalePoint, scaleLinear } from 'd3-scale';
 	import type { ChartConfig } from '$lib/charts/types';
 
@@ -21,7 +21,7 @@
 			<Svg>
 				<Axis placement="left" label={config.yLabel} />
 				<Axis placement="bottom" label={config.xLabel} />
-				<Line class="stroke-green-400 stroke-2" />
+				<Spline class="stroke-green-400 stroke-2" />
 			</Svg>
 			<Tooltip let:data>
 				{#if data}

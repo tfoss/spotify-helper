@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Chart, Svg, Axis, Bar, Tooltip } from 'layerchart';
+	import { Chart, Svg, Axis, Bars, Tooltip } from 'layerchart';
 	import { scaleBand, scaleLinear } from 'd3-scale';
 	import type { ChartConfig } from '$lib/charts/types';
 
@@ -21,7 +21,7 @@
 			<Svg>
 				<Axis placement="left" label={config.yLabel} />
 				<Axis placement="bottom" label={config.xLabel} />
-				<Bar class="fill-blue-500" radius={0} />
+				<Bars fill="#3b82f6" radius={0} />
 			</Svg>
 			<Tooltip let:data>
 				{#if data}

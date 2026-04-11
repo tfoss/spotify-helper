@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Chart, Svg, Arc, Tooltip } from 'layerchart';
+	import { Chart, Svg, Pie, Tooltip } from 'layerchart';
 	import type { ChartConfig } from '$lib/charts/types';
 
 	let { config }: { config: ChartConfig } = $props();
@@ -20,15 +20,10 @@
 	<div class="h-64 w-full">
 		<Chart {data} x="label" y="value">
 			<Svg>
-				<Arc
+				<Pie
 					innerRadius={isDonut ? 0.5 : 0}
 					padAngle={0.02}
-					let:index
-				>
-					<svelte:fragment slot="default">
-						<path fill={COLORS[index % COLORS.length]} />
-					</svelte:fragment>
-				</Arc>
+				/>
 			</Svg>
 			<Tooltip let:data>
 				{#if data}
