@@ -58,23 +58,23 @@ let db: number | null = null;
  * @param params   - Optional bind parameters.
  * @returns Array of row objects keyed by column name.
  */
-function execSql(
+async function execSql(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   api: any,
   dbHandle: number,
   sql: string,
   params: SqlParam[] = [],
-): Record<string, SqlParam>[] {
+): Promise<Record<string, SqlParam>[]> {
   const rows: Record<string, SqlParam>[] = [];
 
-  for (const stmt of api.statements(dbHandle, sql)) {
+  for await (const stmt of api.statements(dbHandle, sql)) {
     if (params.length > 0) {
       api.bind_collection(stmt, params);
     }
 
     const columnNames: string[] = api.column_names(stmt);
 
-    while (api.step(stmt) === SQLite.SQLITE_ROW) {
+    while (await api.step(stmt) === SQLite.SQLITE_ROW) {
       const row: Record<string, SqlParam> = {};
       const values = api.row(stmt);
       for (let i = 0; i < columnNames.length; i++) {
@@ -128,9 +128,9 @@ async function handleInit(dbName?: string): Promise<void> {
   );
 
   // Enable WAL mode for better concurrent read performance.
-  execSql(sqlite3, db, 'PRAGMA journal_mode=WAL;');
+  await execSql(sqlite3, db, 'PRAGMA journal_mode=WAL;');
   // Enforce foreign keys.
-  execSql(sqlite3, db, 'PRAGMA foreign_keys=ON;');
+  await execSql(sqlite3, db, 'PRAGMA foreign_keys=ON;');
 
   // Run any outstanding schema migrations.
   const executor = makeExecutor();
