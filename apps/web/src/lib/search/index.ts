@@ -93,7 +93,24 @@ export async function searchPlaylists(
 
 	let items: SearchResultItem[] = [];
 
-	if (query.mode === 'track') {
+	if (query.mode === 'unified') {
+		// Unified: OR across track name and artist name
+		const byName = await searchTracksByName(exec, query.query);
+		const byArtist = await searchTracksByArtist(exec, query.query);
+
+		// Merge and deduplicate tracks by ID
+		const trackMap = new Map<string, TrackRow>();
+		for (const t of byName) trackMap.set(t.id, t);
+		for (const t of byArtist) trackMap.set(t.id, t);
+
+		const nameItems = await expandTracks(byName, 'track', exec);
+		const artistItems = await expandTracks(
+			byArtist.filter((t) => !byName.some((n) => n.id === t.id)),
+			'artist',
+			exec,
+		);
+		items = [...nameItems, ...artistItems];
+	} else if (query.mode === 'track') {
 		const tracks = await searchTracksByName(exec, query.query);
 		items = await expandTracks(tracks, 'track', exec);
 	} else if (query.mode === 'artist') {
