@@ -1,83 +1,68 @@
 /**
- * Smoke test: validate that wa-sqlite import paths resolve to real files.
+ * Smoke test: validate wa-sqlite import paths resolve correctly.
  *
- * All other DB tests mock DbClient and never load wa-sqlite. This test
- * ensures the actual import paths in worker.ts point to files that exist
- * in the installed wa-sqlite package — catching broken imports before
- * they reach the browser.
+ * These tests catch broken imports before they reach the browser by:
+ * 1. Verifying the package is installed via Node module resolution
+ * 2. Checking all import paths from worker.ts resolve to real files
+ * 3. Verifying the WASM binary exists alongside the MJS loader
+ * 4. Using require.resolve() which mirrors how bundlers find modules
  */
 
 import { describe, it, expect } from 'vitest';
-import { resolve } from 'path';
 import { existsSync } from 'fs';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 /**
- * The import paths used in src/lib/db/worker.ts.
- * If you change an import there, update this list.
+ * The exact import specifiers used in src/lib/db/worker.ts.
+ * If you change an import there, update this list to match.
  */
-const WORKER_IMPORT_PATHS = [
-	'wa-sqlite/dist/wa-sqlite-async.mjs',
-	'wa-sqlite/src/examples/AccessHandlePoolVFS.js',
-];
+const WORKER_IMPORTS = {
+	factory: 'wa-sqlite/dist/wa-sqlite-async.mjs',
+	api: 'wa-sqlite',
+	vfs: 'wa-sqlite/src/examples/AccessHandlePoolVFS.js',
+};
 
-/**
- * Resolve a bare module specifier to an absolute path in node_modules.
- * Walks up from the web app directory to find the package (handles hoisting).
- */
-function resolveModulePath(specifier: string): string | null {
-	const parts = specifier.split('/');
-	const pkgName = parts[0];
-	const subpath = parts.slice(1).join('/');
-
-	// Check local node_modules first, then hoisted
-	const searchDirs = [
-		resolve(__dirname, '../../../node_modules'),
-		resolve(__dirname, '../../../../node_modules'),
-		resolve(__dirname, '../../../../../node_modules'),
-	];
-
-	for (const dir of searchDirs) {
-		const fullPath = resolve(dir, pkgName, subpath);
-		if (existsSync(fullPath)) return fullPath;
-	}
-
-	return null;
-}
-
-describe('wa-sqlite import paths resolve', () => {
-	it('wa-sqlite package is installed', () => {
-		const searchDirs = [
-			resolve(__dirname, '../../../node_modules/wa-sqlite'),
-			resolve(__dirname, '../../../../node_modules/wa-sqlite'),
-			resolve(__dirname, '../../../../../node_modules/wa-sqlite'),
-		];
-
-		const found = searchDirs.some((dir) => existsSync(dir));
-		expect(found).toBe(true);
+describe('wa-sqlite import resolution', () => {
+	it('wa-sqlite package can be resolved by Node', () => {
+		const resolved = require.resolve('wa-sqlite');
+		expect(resolved).toBeTruthy();
+		expect(existsSync(resolved)).toBe(true);
 	});
 
-	for (const importPath of WORKER_IMPORT_PATHS) {
-		it(`"${importPath}" resolves to an existing file`, () => {
-			const resolved = resolveModulePath(importPath);
-			expect(resolved).not.toBeNull();
-			expect(existsSync(resolved!)).toBe(true);
-		});
-	}
-
-	it('wa-sqlite main module resolves', () => {
-		const searchDirs = [
-			resolve(__dirname, '../../../node_modules/wa-sqlite/src/sqlite-api.js'),
-			resolve(__dirname, '../../../../node_modules/wa-sqlite/src/sqlite-api.js'),
-			resolve(__dirname, '../../../../../node_modules/wa-sqlite/src/sqlite-api.js'),
-		];
-
-		const found = searchDirs.some((dir) => existsSync(dir));
-		expect(found).toBe(true);
+	it('factory import resolves: wa-sqlite/dist/wa-sqlite-async.mjs', () => {
+		const resolved = require.resolve(WORKER_IMPORTS.factory);
+		expect(resolved).toBeTruthy();
+		expect(existsSync(resolved)).toBe(true);
+		expect(resolved).toContain('wa-sqlite-async.mjs');
 	});
 
-	it('wa-sqlite async WASM file exists alongside the MJS', () => {
-		const resolved = resolveModulePath('wa-sqlite/dist/wa-sqlite-async.wasm');
-		expect(resolved).not.toBeNull();
-		expect(existsSync(resolved!)).toBe(true);
+	it('VFS import resolves: wa-sqlite/src/examples/AccessHandlePoolVFS.js', () => {
+		const resolved = require.resolve(WORKER_IMPORTS.vfs);
+		expect(resolved).toBeTruthy();
+		expect(existsSync(resolved)).toBe(true);
+		expect(resolved).toContain('AccessHandlePoolVFS.js');
+	});
+
+	it('WASM binary exists next to the MJS factory', () => {
+		const mjsPath = require.resolve(WORKER_IMPORTS.factory);
+		const wasmPath = mjsPath.replace(/\.mjs$/, '.wasm');
+		expect(existsSync(wasmPath)).toBe(true);
+	});
+
+	it('wa-sqlite/dist/ contains both sync and async builds', () => {
+		const asyncMjs = require.resolve('wa-sqlite/dist/wa-sqlite-async.mjs');
+		const syncMjs = require.resolve('wa-sqlite/dist/wa-sqlite.mjs');
+		expect(existsSync(asyncMjs)).toBe(true);
+		expect(existsSync(syncMjs)).toBe(true);
+	});
+
+	it('worker.ts import paths match installed package structure', () => {
+		// This test fails if wa-sqlite updates and renames/removes files
+		for (const [name, specifier] of Object.entries(WORKER_IMPORTS)) {
+			const resolved = require.resolve(specifier);
+			expect(existsSync(resolved), `${name}: ${specifier} did not resolve`).toBe(true);
+		}
 	});
 });
