@@ -1,4 +1,4 @@
-export type SearchMode = 'track' | 'artist' | 'both';
+export type SearchMode = 'track' | 'artist' | 'both' | 'unified';
 
 export interface SearchQuery {
 	query: string;
