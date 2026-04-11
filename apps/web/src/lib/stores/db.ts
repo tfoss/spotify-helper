@@ -60,10 +60,28 @@ function createDbStore() {
 		update((s) => ({ ...s, isInitializing: true, error: null }));
 
 		try {
+			console.debug('[DB] Initializing wa-sqlite...');
 			client = new DbClient();
 			await client.init();
 
 			const executor = client.toExecutor();
+
+			// Log table row counts for debugging
+			try {
+				const counts = await Promise.all([
+					executor('SELECT COUNT(*) AS n FROM playlists'),
+					executor('SELECT COUNT(*) AS n FROM tracks'),
+					executor('SELECT COUNT(*) AS n FROM recent_plays'),
+				]);
+				console.debug(
+					'[DB] Initialized — playlists: %d, tracks: %d, recent_plays: %d',
+					counts[0][0]?.n ?? 0,
+					counts[1][0]?.n ?? 0,
+					counts[2][0]?.n ?? 0,
+				);
+			} catch {
+				console.debug('[DB] Initialized (could not read table counts)');
+			}
 
 			set({
 				isReady: true,

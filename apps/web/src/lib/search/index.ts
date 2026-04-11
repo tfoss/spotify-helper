@@ -115,6 +115,8 @@ export async function searchPlaylists(
 	const deduped = deduplicateItems(items);
 	const searchTimeMs = Math.round(performance.now() - start);
 
+	console.debug('[Search] mode=%s query="%s" → %d results (%dms)', query.mode, query.query, deduped.length, searchTimeMs);
+
 	return {
 		query,
 		items: deduped,
