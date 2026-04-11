@@ -159,7 +159,7 @@ export async function syncPlaylists(
 			name: playlist.name,
 			owner: playlist.owner.display_name ?? '',
 			snapshot_id: playlist.snapshot_id,
-			image_url: playlist.images.length > 0 ? playlist.images[0].url : null,
+			image_url: playlist.images?.length > 0 ? playlist.images[0].url : null,
 			synced_at: Date.now()
 		};
 		await upsertPlaylist(exec, playlistRow);
