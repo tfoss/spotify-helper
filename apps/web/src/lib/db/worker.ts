@@ -48,9 +48,8 @@ let db: number | null = null;
 /**
  * Execute a single SQL statement and return result rows as plain objects.
  *
- * In wa-sqlite v1.0.0, all sqlite functions are methods on the API object
- * returned by Factory(). Constants (SQLITE_ROW, etc.) remain on the
- * namespace import.
+ * Uses wa-sqlite v1.0.0's built-in `execWithParams` helper which handles
+ * async iteration over statements internally.
  *
  * @param api      - The wa-sqlite API object (from Factory()).
  * @param dbHandle - The open database handle.
@@ -58,33 +57,22 @@ let db: number | null = null;
  * @param params   - Optional bind parameters.
  * @returns Array of row objects keyed by column name.
  */
-function execSql(
+async function execSql(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   api: any,
   dbHandle: number,
   sql: string,
   params: SqlParam[] = [],
-): Record<string, SqlParam>[] {
-  const rows: Record<string, SqlParam>[] = [];
+): Promise<Record<string, SqlParam>[]> {
+  const { rows, columns } = await api.execWithParams(dbHandle, sql, params || []);
 
-  for (const stmt of api.statements(dbHandle, sql)) {
-    if (params.length > 0) {
-      api.bind_collection(stmt, params);
+  return rows.map((values: SqlParam[]) => {
+    const row: Record<string, SqlParam> = {};
+    for (let i = 0; i < columns.length; i++) {
+      row[columns[i]] = values[i];
     }
-
-    const columnNames: string[] = api.column_names(stmt);
-
-    while (api.step(stmt) === SQLite.SQLITE_ROW) {
-      const row: Record<string, SqlParam> = {};
-      const values = api.row(stmt);
-      for (let i = 0; i < columnNames.length; i++) {
-        row[columnNames[i]] = values[i] as SqlParam;
-      }
-      rows.push(row);
-    }
-  }
-
-  return rows;
+    return row;
+  });
 }
 
 /**
@@ -128,9 +116,9 @@ async function handleInit(dbName?: string): Promise<void> {
   );
 
   // Enable WAL mode for better concurrent read performance.
-  execSql(sqlite3, db, 'PRAGMA journal_mode=WAL;');
+  await execSql(sqlite3, db, 'PRAGMA journal_mode=WAL;');
   // Enforce foreign keys.
-  execSql(sqlite3, db, 'PRAGMA foreign_keys=ON;');
+  await execSql(sqlite3, db, 'PRAGMA foreign_keys=ON;');
 
   // Run any outstanding schema migrations.
   const executor = makeExecutor();
