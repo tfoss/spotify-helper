@@ -216,6 +216,7 @@
 				results={$search.results}
 				isSearching={$search.isSearching}
 				error={$search.error}
+				searchQuery={refined ? trackQuery : query}
 			/>
 		{:else if (refined ? (trackQuery.trim() || artistQuery.trim()) : query.trim())}
 			<div class="py-10 text-center">
