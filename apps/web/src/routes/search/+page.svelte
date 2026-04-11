@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
+	import { onMount } from 'svelte';
 	import { search } from '$lib/stores/search';
 	import { dbStore } from '$lib/stores/db';
+	import { syncStore } from '$lib/stores/sync';
+	import { authStore } from '$lib/stores/auth';
+	import { SpotifyClient } from '$lib/spotify/client';
 	import SearchResults from '../../components/search/SearchResults.svelte';
 	import EmptyState from '$components/shared/EmptyState.svelte';
 	import ErrorMessage from '$components/shared/ErrorMessage.svelte';
@@ -10,15 +14,53 @@
 	let query = '';
 	let mode: SearchMode = 'track';
 	let artistQuery = '';
+	let playlistCount = $state<number | null>(null);
+	let checkingDb = $state(true);
 
 	$: dbReady = $dbStore.isReady;
 	$: dbInitializing = $dbStore.isInitializing;
 	$: dbError = $dbStore.error;
+	$: hasPlaylists = playlistCount !== null && playlistCount > 0;
+
+	async function checkPlaylistCount() {
+		const { executor } = get(dbStore);
+		if (!executor) return;
+		try {
+			const rows = await executor('SELECT COUNT(*) AS n FROM playlists');
+			playlistCount = (rows[0]?.n as number) ?? 0;
+		} catch {
+			playlistCount = 0;
+		}
+		checkingDb = false;
+	}
 
 	function handleInput() {
 		const { executor } = get(dbStore);
 		if (!executor) return;
 		search.performSearch({ query, mode, artistQuery: mode === 'both' ? artistQuery : undefined }, executor);
+	}
+
+	function getClient(): SpotifyClient | null {
+		const state = get(authStore);
+		if (!state.isAuthenticated || !state.accessToken) return null;
+		return new SpotifyClient(
+			() => get(authStore).accessToken,
+			() => authStore.refreshAccessToken()
+		);
+	}
+
+	async function handleSync() {
+		const client = getClient();
+		const { executor } = get(dbStore);
+		if (!client || !executor) return;
+
+		await syncStore.startSync(client, executor);
+		await checkPlaylistCount();
+	}
+
+	// Check playlist count when DB becomes ready
+	$: if (dbReady) {
+		checkPlaylistCount();
 	}
 </script>
 
@@ -38,6 +80,48 @@
 			title="Database not ready"
 			description="The local database hasn't been initialized yet. This usually resolves automatically."
 		/>
+	{:else if checkingDb}
+		<div class="flex items-center justify-center gap-3 py-10">
+			<div class="h-5 w-5 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
+			<span class="text-gray-400">Checking local data...</span>
+		</div>
+	{:else if !hasPlaylists}
+		<div class="py-16 text-center">
+			<p class="text-3xl">📋</p>
+			<p class="mt-3 text-lg text-gray-400">No playlists synced yet</p>
+			<p class="mt-1 text-sm text-gray-600">Sync your Spotify playlists to start searching.</p>
+			{#if $authStore.isAuthenticated}
+				{#if $syncStore.isSyncing}
+					<div class="mt-4 flex items-center justify-center gap-2">
+						<div class="h-4 w-4 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
+						<span class="text-sm text-gray-400">
+							{#if $syncStore.progress}
+								Syncing... {$syncStore.progress.current}/{$syncStore.progress.total}
+							{:else}
+								Syncing...
+							{/if}
+						</span>
+					</div>
+				{:else}
+					<button
+						onclick={handleSync}
+						class="mt-4 rounded-lg bg-green-600 px-6 py-3 font-medium text-white hover:bg-green-500"
+					>
+						Sync from Spotify
+					</button>
+				{/if}
+				{#if $syncStore.error}
+					<p class="mt-2 text-sm text-red-400">{$syncStore.error}</p>
+				{/if}
+			{:else}
+				<a
+					href="/"
+					class="mt-4 inline-block rounded-lg bg-green-600 px-6 py-3 font-medium text-white hover:bg-green-500"
+				>
+					Connect Spotify First
+				</a>
+			{/if}
+		</div>
 	{:else}
 	<div class="mb-4 space-y-3">
 		<div class="flex gap-2">

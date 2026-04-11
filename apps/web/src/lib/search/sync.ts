@@ -120,8 +120,10 @@ export async function syncPlaylists(
 	onProgress?: OnProgress
 ): Promise<SyncStats> {
 	// Phase 1: Fetch all playlists from Spotify
+	console.debug('[Sync] Starting playlist sync...');
 	onProgress?.({ current: 0, total: 0, phase: 'fetching_playlists' });
 	const spotifyPlaylists = await spotifyClient.getAllUserPlaylists();
+	console.debug('[Sync] Fetched %d playlists from Spotify API', spotifyPlaylists.length);
 
 	// Get existing snapshot IDs from local DB
 	const existingSnapshots = await getExistingSnapshots(exec);
@@ -146,6 +148,7 @@ export async function syncPlaylists(
 		const existingSnapshotId = existingSnapshots.get(playlist.id) ?? null;
 
 		if (!shouldSyncPlaylist(playlist, existingSnapshotId)) {
+			console.debug('[Sync] Playlist "%s" (id: %s) — snapshot unchanged, skipping', playlist.name, playlist.id);
 			stats.playlistsSkipped++;
 			continue;
 		}
@@ -166,6 +169,7 @@ export async function syncPlaylists(
 
 		// Fetch all tracks for this playlist
 		const spotifyTracks = await spotifyClient.getAllPlaylistTracks(playlist.id);
+		console.debug('[Sync] Playlist "%s" (id: %s) — syncing %d tracks', playlist.name, playlist.id, spotifyTracks.length);
 
 		for (let j = 0; j < spotifyTracks.length; j++) {
 			const playlistTrack = spotifyTracks[j];
@@ -185,5 +189,9 @@ export async function syncPlaylists(
 		stats.playlistsSynced++;
 	}
 
+	console.debug(
+		'[Sync] Complete: %d playlists (%d synced, %d skipped), %d tracks indexed',
+		stats.playlistsTotal, stats.playlistsSynced, stats.playlistsSkipped, stats.tracksUpserted,
+	);
 	return stats;
 }
