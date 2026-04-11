@@ -5,8 +5,12 @@ export default defineConfig({
 	plugins: [sveltekit()],
 	server: {
 		port: 5174,
-		host: '127.0.0.1'
+		host: '127.0.0.1',
+		fs: {
+			allow: ['../..']
+		}
 	},
+	assetsInclude: ['**/*.wasm'],
 	optimizeDeps: {
 		exclude: ['wa-sqlite']
 	},
