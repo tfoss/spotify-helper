@@ -44,6 +44,7 @@ export async function getTopArtists(
 		id: artist.id,
 		name: artist.name,
 		imageUrl: artist.images?.[0]?.url,
+		popularity: artist.popularity,
 		spotifyUrl: `https://open.spotify.com/artist/${artist.id}`,
 	}));
 
@@ -64,6 +65,7 @@ export async function getTopTracks(
 		rank: index + 1,
 		id: track.id,
 		name: track.name,
+		popularity: track.popularity,
 		spotifyUrl: `https://open.spotify.com/track/${track.id}`,
 	}));
 

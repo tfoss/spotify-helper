@@ -89,7 +89,7 @@
 			artistsResult = await getTopArtists(client, timeRange);
 			const chartData = artistsResult.items.map((item) => ({
 				label: item.name,
-				value: item.rank,
+				value: item.popularity ?? 0,
 			}));
 			artistsChart = createTopArtistsChart(chartData, topN);
 		} catch (err) {
@@ -109,7 +109,7 @@
 			tracksResult = await getTopTracks(client, timeRange);
 			const chartData = tracksResult.items.map((item) => ({
 				label: item.name,
-				value: item.rank,
+				value: item.popularity ?? 0,
 			}));
 			tracksChart = createTopTracksChart(chartData, topN);
 		} catch (err) {

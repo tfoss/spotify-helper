@@ -77,7 +77,7 @@ describe('createTopArtistsChart', () => {
 	it('sets axis labels', () => {
 		const config = createTopArtistsChart(SAMPLE_3);
 		expect(config.xLabel).toBe('Artist');
-		expect(config.yLabel).toBe('Plays');
+		expect(config.yLabel).toBe('Popularity');
 	});
 
 	it('sorts data descending by value', () => {
@@ -159,7 +159,7 @@ describe('createTopTracksChart', () => {
 	it('sets axis labels for tracks', () => {
 		const config = createTopTracksChart(SAMPLE_3);
 		expect(config.xLabel).toBe('Track');
-		expect(config.yLabel).toBe('Plays');
+		expect(config.yLabel).toBe('Popularity');
 	});
 
 	it('sorts data descending by value', () => {

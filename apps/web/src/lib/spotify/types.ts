@@ -34,6 +34,7 @@ export interface SpotifyTopArtist {
 	name: string;
 	images?: SpotifyImage[];
 	genres?: string[];
+	popularity?: number;
 }
 
 export interface SpotifyAlbum {
