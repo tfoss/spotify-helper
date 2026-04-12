@@ -29,6 +29,13 @@ export interface SpotifyArtist {
 	name: string;
 }
 
+export interface SpotifyTopArtist {
+	id: string;
+	name: string;
+	images?: SpotifyImage[];
+	genres?: string[];
+}
+
 export interface SpotifyAlbum {
 	name: string;
 	release_date: string;

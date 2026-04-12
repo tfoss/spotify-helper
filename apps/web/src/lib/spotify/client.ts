@@ -5,6 +5,7 @@ import type {
 	SpotifyTrack,
 	SpotifyPaginated,
 	SpotifyTopItems,
+	SpotifyTopArtist,
 	SpotifyRecentlyPlayed,
 	SpotifyTimeRange,
 } from './types';
@@ -98,8 +99,8 @@ export class SpotifyClient {
 		return tracks;
 	}
 
-	getTopArtists(timeRange: SpotifyTimeRange, limit = 50): Promise<SpotifyTopItems<SpotifyUser>> {
-		return this.fetch<SpotifyTopItems<SpotifyUser>>(
+	getTopArtists(timeRange: SpotifyTimeRange, limit = 50): Promise<SpotifyTopItems<SpotifyTopArtist>> {
+		return this.fetch<SpotifyTopItems<SpotifyTopArtist>>(
 			`/me/top/artists?time_range=${timeRange}&limit=${limit}`,
 		);
 	}
