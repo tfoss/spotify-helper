@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Chart, Svg, Pie, Tooltip } from 'layerchart';
+	import { Chart, Svg, Pie } from 'layerchart';
 	import type { ChartConfig } from '$lib/charts/types';
 
 	let { config }: { config: ChartConfig } = $props();
@@ -25,14 +25,6 @@
 					padAngle={0.02}
 				/>
 			</Svg>
-			<Tooltip let:data>
-				{#if data}
-					<div class="rounded bg-gray-800 px-2 py-1 text-sm text-white shadow">
-						<span class="font-medium">{data.label}</span>: {data.value}
-						({total > 0 ? Math.round((data.value / total) * 100) : 0}%)
-					</div>
-				{/if}
-			</Tooltip>
 		</Chart>
 	</div>
 	<div class="mt-2 flex flex-wrap justify-center gap-3">
@@ -40,6 +32,7 @@
 			<div class="flex items-center gap-1.5 text-xs text-gray-300">
 				<span class="inline-block h-2.5 w-2.5 rounded-full" style="background: {COLORS[i % COLORS.length]}"></span>
 				{point.label}
+				<span class="text-gray-500">({total > 0 ? Math.round((point.value / total) * 100) : 0}%)</span>
 			</div>
 		{/each}
 	</div>
