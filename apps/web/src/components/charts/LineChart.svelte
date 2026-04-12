@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Chart, Svg, Axis, Spline, Tooltip } from 'layerchart';
+	import { Chart, Svg, Axis, Spline } from 'layerchart';
 	import { scalePoint, scaleLinear } from 'd3-scale';
 	import type { ChartConfig } from '$lib/charts/types';
 
@@ -23,13 +23,6 @@
 				<Axis placement="bottom" label={config.xLabel} />
 				<Spline class="stroke-green-400 stroke-2" />
 			</Svg>
-			<Tooltip let:data>
-				{#if data}
-					<div class="rounded bg-gray-800 px-2 py-1 text-sm text-white shadow">
-						<span class="font-medium">{data.label}</span>: {data.value}
-					</div>
-				{/if}
-			</Tooltip>
 		</Chart>
 	</div>
 {/if}
