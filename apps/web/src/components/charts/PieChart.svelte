@@ -1,12 +1,11 @@
 <script lang="ts">
-	import { Chart, Svg, Pie, Tooltip } from 'layerchart';
+	import { Chart, Svg, Pie } from 'layerchart';
 	import type { ChartConfig } from '$lib/charts/types';
 
 	let { config }: { config: ChartConfig } = $props();
 
 	let data = $derived(config.data);
 	let isDonut = $derived(config.type === 'donut');
-	let total = $derived(data.reduce((sum, d) => sum + d.value, 0));
 
 	const COLORS = [
 		'#22c55e', '#3b82f6', '#a855f7', '#f59e0b',
@@ -25,14 +24,6 @@
 					padAngle={0.02}
 				/>
 			</Svg>
-			<Tooltip let:data>
-				{#if data}
-					<div class="rounded bg-gray-800 px-2 py-1 text-sm text-white shadow">
-						<span class="font-medium">{data.label}</span>: {data.value}
-						({total > 0 ? Math.round((data.value / total) * 100) : 0}%)
-					</div>
-				{/if}
-			</Tooltip>
 		</Chart>
 	</div>
 	<div class="mt-2 flex flex-wrap justify-center gap-3">

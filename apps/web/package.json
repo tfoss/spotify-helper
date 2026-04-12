@@ -10,6 +10,7 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:build": "vite build",
     "test:e2e": "playwright test",
     "deploy": "npm run build && npx wrangler pages deploy build/ --project-name=spotify-helper"
   },
