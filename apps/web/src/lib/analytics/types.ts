@@ -11,6 +11,7 @@ export interface TopItem {
 	name: string;
 	imageUrl?: string;
 	playCount?: number;
+	popularity?: number;
 	spotifyUrl: string;
 }
 

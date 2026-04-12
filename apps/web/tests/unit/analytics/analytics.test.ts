@@ -110,6 +110,43 @@ describe('time range filter', () => {
 		expect(mockClient.getTopArtists).toHaveBeenCalledTimes(3);
 	});
 
+	// Regression: sh-f6r — transform must propagate popularity so charts can use it as value.
+	it('propagates artist.popularity onto TopItem.popularity', async () => {
+		const mockClient = {
+			getTopArtists: vi.fn().mockResolvedValue({
+				items: [
+					{ id: 'a1', name: 'Artist A', images: [], popularity: 87 },
+					{ id: 'a2', name: 'Artist B', images: [], popularity: 42 },
+				],
+				total: 2,
+				limit: 50,
+				offset: 0,
+			}),
+		};
+
+		const result = await getTopArtists(mockClient as any, 'short_term');
+		expect(result.items[0].popularity).toBe(87);
+		expect(result.items[1].popularity).toBe(42);
+	});
+
+	it('propagates track.popularity onto TopItem.popularity', async () => {
+		const mockClient = {
+			getTopTracks: vi.fn().mockResolvedValue({
+				items: [
+					{ id: 't1', name: 'Track A', artists: [{ id: 'a1', name: 'A' }], album: { name: 'Alb', release_date: '2024' }, duration_ms: 200000, popularity: 73 },
+					{ id: 't2', name: 'Track B', artists: [{ id: 'a2', name: 'B' }], album: { name: 'Alb', release_date: '2024' }, duration_ms: 200000, popularity: 31 },
+				],
+				total: 2,
+				limit: 50,
+				offset: 0,
+			}),
+		};
+
+		const result = await getTopTracks(mockClient as any, 'short_term');
+		expect(result.items[0].popularity).toBe(73);
+		expect(result.items[1].popularity).toBe(31);
+	});
+
 	// Regression: sh-2xa — transform must map artist.name (not id/display_name) to TopItem.name.
 	it('maps artist.name (not id or display_name) to TopItem.name', async () => {
 		const mockClient = {

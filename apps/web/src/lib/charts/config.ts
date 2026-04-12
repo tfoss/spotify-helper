@@ -16,7 +16,7 @@ export function createTopArtistsChart(data: ChartDataPoint[], topN = 10): ChartC
 		type: 'bar',
 		title: 'Top Artists',
 		xLabel: 'Artist',
-		yLabel: 'Plays',
+		yLabel: 'Popularity',
 		data: applyTopN(data, topN),
 		options: { topN, sortDirection: 'desc' },
 	};
@@ -27,7 +27,7 @@ export function createTopTracksChart(data: ChartDataPoint[], topN = 10): ChartCo
 		type: 'bar',
 		title: 'Top Tracks',
 		xLabel: 'Track',
-		yLabel: 'Plays',
+		yLabel: 'Popularity',
 		data: applyTopN(data, topN),
 		options: { topN, sortDirection: 'desc' },
 	};
