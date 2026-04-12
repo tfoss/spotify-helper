@@ -27,12 +27,12 @@
 			</Svg>
 		</Chart>
 	</div>
-	<div class="mt-2 flex flex-wrap justify-center gap-3">
+	<div class="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
 		{#each data as point, i}
-			<div class="flex items-center gap-1.5 text-xs text-gray-300">
-				<span class="inline-block h-2.5 w-2.5 rounded-full" style="background: {COLORS[i % COLORS.length]}"></span>
-				{point.label}
-				<span class="text-gray-500">({total > 0 ? Math.round((point.value / total) * 100) : 0}%)</span>
+			<div class="flex items-center gap-2 text-xs">
+				<span class="inline-block h-3 w-3 flex-shrink-0 rounded-full" style="background: {COLORS[i % COLORS.length]}"></span>
+				<span class="font-medium text-gray-200">{point.label}</span>
+				<span class="text-gray-500">{total > 0 ? Math.round((point.value / total) * 100) : 0}%</span>
 			</div>
 		{/each}
 	</div>
