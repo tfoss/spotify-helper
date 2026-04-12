@@ -95,7 +95,7 @@ describe('time range filter', () => {
 	it('passes the time range to the Spotify API call', async () => {
 		const mockClient = {
 			getTopArtists: vi.fn().mockResolvedValue({
-				items: [{ id: 'a1', display_name: 'Artist', images: [] }],
+				items: [{ id: 'a1', name: 'Artist', images: [] }],
 				total: 1,
 				limit: 50,
 				offset: 0,
@@ -108,6 +108,27 @@ describe('time range filter', () => {
 		}
 
 		expect(mockClient.getTopArtists).toHaveBeenCalledTimes(3);
+	});
+
+	// Regression: sh-2xa — transform must map artist.name (not id/display_name) to TopItem.name.
+	it('maps artist.name (not id or display_name) to TopItem.name', async () => {
+		const mockClient = {
+			getTopArtists: vi.fn().mockResolvedValue({
+				items: [
+					{ id: '3WrFJ7ztbogyGnTHbHJFl2', name: 'Beirut', images: [] },
+					{ id: '4NHQUGzhtTLFvgF5SZesLK', name: 'Tom Waits', images: [] },
+				],
+				total: 2,
+				limit: 50,
+				offset: 0,
+			}),
+		};
+
+		const result = await getTopArtists(mockClient as any, 'short_term');
+		expect(result.items[0].name).toBe('Beirut');
+		expect(result.items[1].name).toBe('Tom Waits');
+		// Guard: should never leak the raw Spotify ID into the rendered name.
+		expect(result.items[0].name).not.toBe('3WrFJ7ztbogyGnTHbHJFl2');
 	});
 
 	it('returns result tagged with the requested time range', async () => {

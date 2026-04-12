@@ -42,7 +42,7 @@ export async function getTopArtists(
 	const items: TopItem[] = response.items.map((artist, index) => ({
 		rank: index + 1,
 		id: artist.id,
-		name: artist.display_name ?? artist.id,
+		name: artist.name,
 		imageUrl: artist.images?.[0]?.url,
 		spotifyUrl: `https://open.spotify.com/artist/${artist.id}`,
 	}));
