@@ -156,6 +156,7 @@ describe('syncPlaylists — snapshot_id sync skip', () => {
 			getAllPlaylistTracks: vi.fn().mockResolvedValue([
 				makePlaylistTrack(track),
 			]),
+			getArtistsByIds: vi.fn().mockResolvedValue({ artists: [] }),
 		} as unknown as SpotifyClient;
 
 		const stats = await syncPlaylists(mockClient, exec);
@@ -187,6 +188,7 @@ describe('syncPlaylists — pagination', () => {
 			getAllPlaylistTracks: vi.fn().mockResolvedValue([
 				makePlaylistTrack(makeSpotifyTrack('t1', 'Song', 'Artist')),
 			]),
+			getArtistsByIds: vi.fn().mockResolvedValue({ artists: [] }),
 		} as unknown as SpotifyClient;
 
 		const stats = await syncPlaylists(mockClient, exec);

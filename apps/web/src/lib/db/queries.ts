@@ -74,14 +74,15 @@ export async function upsertTrack(
 
   const sql = `
     INSERT INTO tracks
-      (id, name, name_lower, artist_name, artist_lower, album_name,
+      (id, name, name_lower, artist_name, artist_lower, artist_id, album_name,
        duration_ms, popularity, release_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       name         = excluded.name,
       name_lower   = excluded.name_lower,
       artist_name  = excluded.artist_name,
       artist_lower = excluded.artist_lower,
+      artist_id    = excluded.artist_id,
       album_name   = excluded.album_name,
       duration_ms  = excluded.duration_ms,
       popularity   = excluded.popularity,
@@ -93,6 +94,7 @@ export async function upsertTrack(
     nameLower,
     track.artist_name,
     artistLower,
+    track.artist_id ?? null,
     track.album_name,
     track.duration_ms ?? null,
     track.popularity ?? null,

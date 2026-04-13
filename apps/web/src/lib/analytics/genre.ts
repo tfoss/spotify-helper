@@ -126,12 +126,12 @@ export async function getGenreDistributionForPlaylist(
 	exec: DbExecutor,
 	playlistId: string,
 ): Promise<GenreDistribution> {
-	// Get genres for artists of tracks in this playlist
+	// Get genres for artists of tracks in this playlist via the stored artist_id
 	const sql = `
 		SELECT ag.genre, COUNT(DISTINCT t.id) AS count
 		FROM playlist_tracks pt
 		INNER JOIN tracks t ON t.id = pt.track_id
-		INNER JOIN artist_genres ag ON ag.artist_id = t.artist_name
+		INNER JOIN artist_genres ag ON ag.artist_id = t.artist_id
 		WHERE pt.playlist_id = ?
 		GROUP BY ag.genre
 		ORDER BY count DESC;`;

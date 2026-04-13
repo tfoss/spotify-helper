@@ -6,7 +6,7 @@
  * applied.
  */
 
-import { SCHEMA_V1_STATEMENTS, SCHEMA_V2_STATEMENTS } from './schema.js';
+import { SCHEMA_V1_STATEMENTS, SCHEMA_V2_STATEMENTS, SCHEMA_V3_STATEMENTS } from './schema.js';
 import type { DbExecutor } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -38,6 +38,11 @@ export const MIGRATIONS: readonly Migration[] = [
     version: 2,
     label: 'Artist genres — genre tags per artist for genre distribution',
     statements: SCHEMA_V2_STATEMENTS,
+  },
+  {
+    version: 3,
+    label: 'Tracks artist_id — primary artist Spotify ID for genre joins',
+    statements: SCHEMA_V3_STATEMENTS,
   },
 ] as const;
 
