@@ -192,7 +192,15 @@ function createAuthStore() {
 
 			scheduleRefresh(expiresAt);
 		} catch (err) {
-			logout();
+			// Network errors (e.g. worker down during dev HMR) should not
+			// destroy the refresh token. Only clear auth state, not storage.
+			update((s) => ({
+				...s,
+				isAuthenticated: false,
+				accessToken: null,
+				expiresAt: null,
+				error: 'Could not refresh token — will retry on next page load'
+			}));
 		}
 	}
 
