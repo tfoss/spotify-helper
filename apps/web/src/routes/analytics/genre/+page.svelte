@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
+	import { authStore } from '$lib/stores/auth';
 	import { dbStore } from '$lib/stores/db';
+	import { SpotifyClient } from '$lib/spotify/client';
+	import { syncArtistGenres } from '$lib/search/sync';
 	import {
 		getGenreDistributionAll,
 		getGenreDistributionForPlaylist,
@@ -18,10 +21,20 @@
 	let playlists = $state<PlaylistSummary[]>([]);
 	let selectedPlaylistId = $state<string | null>(null);
 	let loading = $state(false);
+	let syncing = $state(false);
 	let error = $state<string | null>(null);
 
 	let genreResult = $state<GenreDistribution | null>(null);
 	let genreChart = $state<ChartConfig | null>(null);
+
+	function getClient(): SpotifyClient | null {
+		const state = get(authStore);
+		if (!state.isAuthenticated || !state.accessToken) return null;
+		return new SpotifyClient(
+			() => get(authStore).accessToken,
+			() => authStore.refreshAccessToken(),
+		);
+	}
 
 	async function loadPlaylists() {
 		const { executor } = get(dbStore);
@@ -61,6 +74,30 @@
 		}
 	}
 
+	/**
+	 * Fetch artist genres from Spotify for all artists stored in the local DB,
+	 * then reload the genre chart.
+	 */
+	async function handleSyncArtistData() {
+		const client = getClient();
+		const { executor } = get(dbStore);
+		if (!client || !executor) return;
+
+		syncing = true;
+		error = null;
+		try {
+			// Collect all artist IDs currently stored in the tracks table
+			const rows = await executor(`SELECT DISTINCT artist_id FROM tracks WHERE artist_id IS NOT NULL`);
+			const artistIds = new Set<string>(rows.map((r) => r.artist_id as string));
+			await syncArtistGenres(client, executor, artistIds);
+			await loadGenreData();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to sync artist data';
+		} finally {
+			syncing = false;
+		}
+	}
+
 	function handlePlaylistChange(playlistId: string | null) {
 		selectedPlaylistId = playlistId;
 		loadGenreData();
@@ -79,12 +116,23 @@
 			<p class="mt-1 text-sm text-gray-400">Explore genre breakdown across your playlists</p>
 		</div>
 
-		<a
-			href="/analytics"
-			class="text-sm text-gray-400 hover:text-white"
-		>
-			&larr; Back to Analytics
-		</a>
+		<div class="flex items-center gap-3">
+			{#if $authStore.isAuthenticated}
+				<button
+					onclick={handleSyncArtistData}
+					disabled={syncing}
+					class="rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 disabled:opacity-50"
+				>
+					{syncing ? 'Syncing…' : 'Sync artist data'}
+				</button>
+			{/if}
+			<a
+				href="/analytics"
+				class="text-sm text-gray-400 hover:text-white"
+			>
+				&larr; Back to Analytics
+			</a>
+		</div>
 	</div>
 
 	<!-- Playlist selector -->
@@ -155,7 +203,14 @@
 	{:else}
 		<div class="py-20 text-center text-gray-500">
 			<p>No genre data available.</p>
-			<p class="mt-2 text-sm text-gray-600">Genre data is populated when artist information is synced from Spotify.</p>
+			<p class="mt-2 text-sm text-gray-600">
+				Genre data is populated when artist information is synced from Spotify.
+				{#if $authStore.isAuthenticated}
+					Click <strong class="text-gray-400">Sync artist data</strong> above, or sync your playlists first.
+				{:else}
+					Connect to Spotify and sync your playlists to populate genre data.
+				{/if}
+			</p>
 		</div>
 	{/if}
 </div>

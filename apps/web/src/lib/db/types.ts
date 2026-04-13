@@ -26,6 +26,7 @@ export interface TrackRow {
   name_lower: string;
   artist_name: string;
   artist_lower: string;
+  artist_id: string | null;
   album_name: string;
   duration_ms: number | null;
   popularity: number | null;
