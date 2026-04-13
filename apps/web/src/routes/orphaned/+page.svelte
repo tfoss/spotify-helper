@@ -39,14 +39,14 @@
 <div class="mx-auto max-w-3xl px-4 py-10">
 	<div class="mb-6 flex items-center justify-between">
 		<div>
-			<h1 class="text-3xl font-bold text-white">Orphaned Tracks</h1>
+			<h1 class="text-3xl font-bold text-gray-900 dark:text-white">Orphaned Tracks</h1>
 			<p class="mt-1 text-sm text-gray-500">
 				Tracks in your library that aren't in any playlist
 			</p>
 		</div>
 		<a
 			href="/search"
-			class="text-sm text-gray-400 hover:text-white transition-colors"
+			class="text-sm text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
 		>
 			← Back to Search
 		</a>
@@ -55,7 +55,7 @@
 	{#if dbInitializing}
 		<div class="flex items-center justify-center gap-3 py-16">
 			<div class="h-6 w-6 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
-			<span class="text-gray-400">Initializing database...</span>
+			<span class="text-gray-600 dark:text-gray-400">Initializing database...</span>
 		</div>
 	{:else if dbError}
 		<ErrorMessage message={dbError} onretry={() => dbStore.initialize()} />

@@ -79,12 +79,12 @@
 	<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 		<div>
 			<h1 class="text-3xl font-bold">Playlist Overlap</h1>
-			<p class="mt-1 text-sm text-gray-400">Track commonality between your playlists</p>
+			<p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Track commonality between your playlists</p>
 		</div>
 
 		<a
 			href="/analytics"
-			class="text-sm text-gray-400 hover:text-white"
+			class="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
 		>
 			&larr; Back to Analytics
 		</a>
@@ -93,16 +93,16 @@
 	<!-- Playlist multi-selector -->
 	<div class="space-y-3">
 		<div class="flex items-center justify-between">
-			<h3 class="text-sm font-medium text-gray-400">Select playlists (2 or more):</h3>
+			<h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Select playlists (2 or more):</h3>
 			<div class="flex gap-2">
 				<button
-					class="rounded bg-gray-800 px-3 py-1 text-xs text-gray-400 hover:text-white"
+					class="rounded bg-gray-100 px-3 py-1 text-xs text-gray-600 hover:text-gray-900 dark:bg-gray-800 dark:text-gray-400 dark:hover:text-white"
 					onclick={selectAll}
 				>
 					Select All
 				</button>
 				<button
-					class="rounded bg-gray-800 px-3 py-1 text-xs text-gray-400 hover:text-white"
+					class="rounded bg-gray-100 px-3 py-1 text-xs text-gray-600 hover:text-gray-900 dark:bg-gray-800 dark:text-gray-400 dark:hover:text-white"
 					onclick={selectNone}
 				>
 					Clear
@@ -115,7 +115,7 @@
 				<button
 					class="rounded-full px-3 py-1 text-sm transition-colors {selectedIds.has(playlist.id)
 						? 'bg-green-600 text-white'
-						: 'bg-gray-800 text-gray-400 hover:text-white'}"
+						: 'bg-gray-100 text-gray-600 hover:text-gray-900 dark:bg-gray-800 dark:text-gray-400 dark:hover:text-white'}"
 					onclick={() => togglePlaylist(playlist.id)}
 				>
 					{playlist.name}
@@ -142,7 +142,7 @@
 			<p class="text-red-400">{error}</p>
 			<button
 				onclick={loadMatrix}
-				class="mt-4 rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+				class="mt-4 rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
 			>
 				Retry
 			</button>
@@ -159,7 +159,7 @@
 		<div class="flex items-center gap-2 text-xs text-gray-500">
 			<span>Similarity:</span>
 			<div class="flex items-center gap-1">
-				<div class="h-4 w-4 rounded bg-gray-800"></div>
+				<div class="h-4 w-4 rounded bg-gray-200 dark:bg-gray-800"></div>
 				<span>0%</span>
 			</div>
 			<div class="h-4 w-16 rounded" style="background: linear-gradient(to right, rgb(22, 101, 52), rgb(34, 197, 94))"></div>
@@ -176,7 +176,7 @@
 					<tr>
 						<th class="p-2"></th>
 						{#each matrix.playlistNames as name, j}
-							<th class="max-w-24 truncate p-2 text-xs font-medium text-gray-400" title={name}>
+							<th class="max-w-24 truncate p-2 text-xs font-medium text-gray-600 dark:text-gray-400" title={name}>
 								{name}
 							</th>
 						{/each}
@@ -185,7 +185,7 @@
 				<tbody>
 					{#each matrix.cells as row, i}
 						<tr>
-							<td class="max-w-32 truncate whitespace-nowrap p-2 text-right text-xs font-medium text-gray-400" title={matrix.playlistNames[i]}>
+							<td class="max-w-32 truncate whitespace-nowrap p-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400" title={matrix.playlistNames[i]}>
 								{matrix.playlistNames[i]}
 							</td>
 							{#each row as cell, j}
@@ -197,7 +197,7 @@
 								>
 									<div
 										class="flex h-12 w-12 items-center justify-center rounded text-xs font-bold {isDiagonal
-											? 'bg-gray-700 text-gray-300'
+											? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
 											: 'text-white'}"
 										style={isDiagonal
 											? ''
@@ -220,19 +220,19 @@
 
 		{#if allCells.length > 0}
 			<div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
-				<div class="rounded-lg bg-gray-900 p-4">
+				<div class="rounded-lg bg-gray-100 p-4 dark:bg-gray-900">
 					<p class="text-xs text-gray-500">Avg Similarity</p>
-					<p class="text-2xl font-bold text-white">{Math.round(avgSimilarity * 100)}%</p>
+					<p class="text-2xl font-bold text-gray-900 dark:text-white">{Math.round(avgSimilarity * 100)}%</p>
 				</div>
 				{#if maxOverlap}
-					<div class="rounded-lg bg-gray-900 p-4">
+					<div class="rounded-lg bg-gray-100 p-4 dark:bg-gray-900">
 						<p class="text-xs text-gray-500">Most Overlap</p>
-						<p class="text-2xl font-bold text-green-400">{maxOverlap.sharedCount} tracks</p>
+						<p class="text-2xl font-bold text-green-500 dark:text-green-400">{maxOverlap.sharedCount} tracks</p>
 					</div>
 				{/if}
-				<div class="rounded-lg bg-gray-900 p-4">
+				<div class="rounded-lg bg-gray-100 p-4 dark:bg-gray-900">
 					<p class="text-xs text-gray-500">Pairs Compared</p>
-					<p class="text-2xl font-bold text-white">{allCells.length}</p>
+					<p class="text-2xl font-bold text-gray-900 dark:text-white">{allCells.length}</p>
 				</div>
 			</div>
 		{/if}

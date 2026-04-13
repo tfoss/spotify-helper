@@ -113,7 +113,7 @@
 	<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 		<div>
 			<h1 class="text-3xl font-bold">Genre Distribution</h1>
-			<p class="mt-1 text-sm text-gray-400">Explore genre breakdown across your playlists</p>
+			<p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Explore genre breakdown across your playlists</p>
 		</div>
 
 		<div class="flex items-center gap-3">
@@ -128,7 +128,7 @@
 			{/if}
 			<a
 				href="/analytics"
-				class="text-sm text-gray-400 hover:text-white"
+				class="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
 			>
 				&larr; Back to Analytics
 			</a>
@@ -137,10 +137,10 @@
 
 	<!-- Playlist selector -->
 	<div class="flex items-center gap-3">
-		<label for="genre-playlist-select" class="text-sm text-gray-400">Scope:</label>
+		<label for="genre-playlist-select" class="text-sm text-gray-600 dark:text-gray-400">Scope:</label>
 		<select
 			id="genre-playlist-select"
-			class="rounded-lg bg-gray-800 px-3 py-2 text-gray-300 outline-none ring-1 ring-gray-700"
+			class="rounded-lg bg-gray-100 px-3 py-2 text-gray-700 outline-none ring-1 ring-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700"
 			onchange={(e) => handlePlaylistChange(e.currentTarget.value || null)}
 		>
 			<option value="">All Playlists</option>
@@ -162,7 +162,7 @@
 			<p class="text-red-400">{error}</p>
 			<button
 				onclick={loadGenreData}
-				class="mt-4 rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+				class="mt-4 rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
 			>
 				Retry
 			</button>
@@ -184,18 +184,18 @@
 
 			<!-- Genre list -->
 			<div class="space-y-2">
-				<h3 class="text-sm font-medium text-gray-400">All Genres</h3>
+				<h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">All Genres</h3>
 				{#each genreResult.data as genre, i}
-					<div class="flex items-center gap-3 rounded-lg bg-gray-900 p-3">
+					<div class="flex items-center gap-3 rounded-lg bg-gray-100 p-3 dark:bg-gray-900">
 						<span class="w-8 text-right text-sm font-bold text-gray-500">#{i + 1}</span>
-						<span class="flex-1 font-medium text-white">{genre.label}</span>
+						<span class="flex-1 font-medium text-gray-900 dark:text-white">{genre.label}</span>
 						<div class="w-24">
 							<div
 								class="h-3 rounded bg-green-600"
 								style="width: {Math.max((genre.value / genreResult.data[0].value) * 100, 5)}%"
 							></div>
 						</div>
-						<span class="w-10 text-right text-sm text-gray-400">{genre.value}</span>
+						<span class="w-10 text-right text-sm text-gray-600 dark:text-gray-400">{genre.value}</span>
 					</div>
 				{/each}
 			</div>
@@ -203,10 +203,10 @@
 	{:else}
 		<div class="py-20 text-center text-gray-500">
 			<p>No genre data available.</p>
-			<p class="mt-2 text-sm text-gray-600">
+			<p class="mt-2 text-sm text-gray-400 dark:text-gray-600">
 				Genre data is populated when artist information is synced from Spotify.
 				{#if $authStore.isAuthenticated}
-					Click <strong class="text-gray-400">Sync artist data</strong> above, or sync your playlists first.
+					Click <strong class="text-gray-600 dark:text-gray-400">Sync artist data</strong> above, or sync your playlists first.
 				{:else}
 					Connect to Spotify and sync your playlists to populate genre data.
 				{/if}

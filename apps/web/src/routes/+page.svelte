@@ -42,23 +42,23 @@
 </script>
 
 <div class="flex flex-col items-center justify-center py-20">
-	<h1 class="mb-4 text-4xl font-bold text-green-400">Spotify Helper</h1>
-	<p class="mb-8 text-lg text-gray-400">
+	<h1 class="mb-4 text-4xl font-bold text-green-500 dark:text-green-400">Spotify Helper</h1>
+	<p class="mb-8 text-lg text-gray-600 dark:text-gray-400">
 		Search, analyze, and explore your Spotify library.
 	</p>
 
 	{#if initializing}
 		<div class="flex items-center gap-3">
 			<div class="h-6 w-6 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
-			<span class="text-gray-400">Checking authentication...</span>
+			<span class="text-gray-600 dark:text-gray-400">Checking authentication...</span>
 		</div>
 	{:else if initError}
 		<div class="rounded-xl border border-red-800 bg-red-950/50 p-6 text-center">
 			<p class="text-lg font-semibold text-red-400">Failed to initialize</p>
-			<p class="mt-2 text-sm text-gray-400">{initError}</p>
+			<p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{initError}</p>
 			<button
 				onclick={retryInit}
-				class="mt-4 rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+				class="mt-4 rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
 			>
 				Try Again
 			</button>
@@ -73,13 +73,13 @@
 			</a>
 			<a
 				href="/analytics"
-				class="rounded-lg border border-gray-600 px-6 py-3 font-medium text-gray-300 hover:border-gray-400 hover:text-white"
+				class="rounded-lg border border-gray-300 px-6 py-3 font-medium text-gray-700 hover:border-gray-400 hover:text-gray-900 dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-400 dark:hover:text-white"
 			>
 				Analytics
 			</a>
 			<button
 				onclick={handleLogout}
-				class="rounded-lg border border-gray-600 px-6 py-3 font-medium text-gray-300 hover:border-gray-400 hover:text-white"
+				class="rounded-lg border border-gray-300 px-6 py-3 font-medium text-gray-700 hover:border-gray-400 hover:text-gray-900 dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-400 dark:hover:text-white"
 			>
 				Log out
 			</button>
@@ -87,7 +87,7 @@
 
 		<button
 			onclick={() => (showWipeConfirm = true)}
-			class="mt-4 text-xs text-gray-600 hover:text-gray-400"
+			class="mt-4 text-xs text-gray-400 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-400"
 		>
 			Log out &amp; clear local data
 		</button>
@@ -104,7 +104,7 @@
 					</button>
 					<button
 						onclick={() => (showWipeConfirm = false)}
-						class="rounded bg-gray-800 px-4 py-1.5 text-sm text-gray-300 hover:bg-gray-700"
+						class="rounded bg-gray-100 px-4 py-1.5 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
 					>
 						Cancel
 					</button>

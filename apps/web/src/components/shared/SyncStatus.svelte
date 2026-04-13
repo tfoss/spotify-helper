@@ -33,13 +33,13 @@
 			<div class="flex-1 min-w-0">
 				{#if $syncStore.progress}
 					{#if $syncStore.progress.phase === 'fetching_playlists'}
-						<span class="text-gray-400">Fetching playlists...</span>
+						<span class="text-gray-600 dark:text-gray-400">Fetching playlists...</span>
 					{:else}
 						<div class="flex items-center gap-2">
-							<span class="text-gray-400 flex-shrink-0">
+							<span class="text-gray-600 flex-shrink-0 dark:text-gray-400">
 								{$syncStore.progress.current}/{$syncStore.progress.total}
 							</span>
-							<div class="h-1.5 flex-1 rounded-full bg-gray-800">
+							<div class="h-1.5 flex-1 rounded-full bg-gray-200 dark:bg-gray-800">
 								<div
 									class="h-1.5 rounded-full bg-green-500 transition-all duration-300"
 									style="width: {syncPercent}%"
@@ -48,23 +48,23 @@
 						</div>
 					{/if}
 				{:else}
-					<span class="text-gray-400">Syncing...</span>
+					<span class="text-gray-600 dark:text-gray-400">Syncing...</span>
 				{/if}
 			</div>
 		</div>
 	{:else}
-		<span class="text-gray-500">
+		<span class="text-gray-500 dark:text-gray-500">
 			Synced: {formatTimeAgo($syncStore.lastSyncedAt)}
 		</span>
 		{#if $syncStore.lastStats}
-			<span class="text-xs text-gray-600">
+			<span class="text-xs text-gray-400 dark:text-gray-600">
 				({$syncStore.lastStats.playlistsTotal} playlists, {$syncStore.lastStats.tracksUpserted} tracks)
 			</span>
 		{/if}
 		{#if onSync}
 			<button
 				onclick={onSync}
-				class="rounded px-2 py-1 text-xs text-gray-400 hover:bg-gray-800 hover:text-white"
+				class="rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
 			>
 				Sync Now
 			</button>

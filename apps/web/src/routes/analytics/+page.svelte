@@ -8,7 +8,6 @@
 		getTopArtists,
 		getTopTracks,
 		getRecentlyPlayed,
-		aggregateByArtist,
 		aggregateByHour,
 		persistRecentPlays,
 		getLocalRecentPlays,
@@ -223,12 +222,12 @@
 	</div>
 
 	<!-- Tab navigation -->
-	<div class="flex items-center gap-1 border-b border-gray-800">
+	<div class="flex items-center gap-1 border-b border-gray-200 dark:border-gray-800">
 		{#each tabs as tab}
 			<button
 				class="border-b-2 px-4 py-3 text-sm font-medium transition-colors {activeTab === tab.id
-					? 'border-green-500 text-green-400'
-					: 'border-transparent text-gray-400 hover:text-white'}"
+					? 'border-green-500 text-green-600 dark:text-green-400'
+					: 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}"
 				onclick={() => handleTabChange(tab.id)}
 			>
 				{tab.label}
@@ -236,19 +235,19 @@
 		{/each}
 		<a
 			href="/analytics/overlap"
-			class="ml-auto rounded-md px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+			class="ml-auto rounded-md px-3 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
 		>
 			Overlap &rarr;
 		</a>
 		<a
 			href="/analytics/genre"
-			class="rounded-md px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+			class="rounded-md px-3 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
 		>
 			Genres &rarr;
 		</a>
 		<a
 			href="/analytics/era"
-			class="rounded-md px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+			class="rounded-md px-3 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
 		>
 			Era Heatmap &rarr;
 		</a>
@@ -256,13 +255,13 @@
 
 	<!-- TopN selector for artists/tracks -->
 	{#if tabUsesTopN(activeTab)}
-		<div class="flex items-center gap-2 text-sm text-gray-400">
+		<div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
 			<span>Show top</span>
 			{#each topNOptions as n}
 				<button
 					class="rounded px-2 py-1 {topN === n
 						? 'bg-green-600 text-white'
-						: 'bg-gray-800 text-gray-400 hover:text-white'}"
+						: 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:text-white'}"
 					onclick={() => handleTopNChange(n)}
 				>
 					{n}
@@ -273,7 +272,7 @@
 
 	<!-- Content -->
 	{#if !$authStore.isAuthenticated}
-		<div class="py-20 text-center text-gray-400">
+		<div class="py-20 text-center text-gray-600 dark:text-gray-400">
 			<p class="text-lg">Connect to Spotify to view your analytics.</p>
 			<button
 				onclick={() => authStore.login()}
@@ -286,7 +285,7 @@
 		<div class="space-y-4">
 			<div class="flex items-center gap-3">
 				<div class="h-5 w-5 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
-				<span class="text-sm text-gray-400">
+				<span class="text-sm text-gray-600 dark:text-gray-400">
 					{#if activeTab === 'artists'}Loading top artists...
 					{:else if activeTab === 'tracks'}Loading top tracks...
 					{:else if activeTab === 'recent'}Loading recent activity...
@@ -307,16 +306,16 @@
 			<div class="grid gap-6 lg:grid-cols-2">
 				<div class="space-y-3">
 					{#each artistsResult.items.slice(0, topN) as item}
-						<div class="flex items-center gap-3 rounded-lg bg-gray-900 p-3">
+						<div class="flex items-center gap-3 rounded-lg bg-gray-100 p-3 dark:bg-gray-900">
 							<span class="w-8 text-right text-sm font-bold text-gray-500">#{item.rank}</span>
 							{#if item.imageUrl}
 								<img src={item.imageUrl} alt={item.name} class="h-10 w-10 rounded-full object-cover" />
 							{:else}
-								<div class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-800 text-gray-500">
+								<div class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-gray-500 dark:bg-gray-800">
 									<span class="text-xs">?</span>
 								</div>
 							{/if}
-							<span class="font-medium text-white">{item.name}</span>
+							<span class="font-medium text-gray-900 dark:text-white">{item.name}</span>
 						</div>
 					{/each}
 				</div>
@@ -341,9 +340,9 @@
 			<div class="grid gap-6 lg:grid-cols-2">
 				<div class="space-y-3">
 					{#each tracksResult.items.slice(0, topN) as item}
-						<div class="flex items-center gap-3 rounded-lg bg-gray-900 p-3">
+						<div class="flex items-center gap-3 rounded-lg bg-gray-100 p-3 dark:bg-gray-900">
 							<span class="w-8 text-right text-sm font-bold text-gray-500">#{item.rank}</span>
-							<span class="font-medium text-white">{item.name}</span>
+							<span class="font-medium text-gray-900 dark:text-white">{item.name}</span>
 						</div>
 					{/each}
 				</div>
@@ -367,9 +366,9 @@
 			<div class="grid gap-6 lg:grid-cols-2">
 				<div class="space-y-3">
 					{#each recentResult.plays as play}
-						<div class="rounded-lg bg-gray-900 p-3">
-							<p class="font-medium text-white">{play.trackName}</p>
-							<p class="text-sm text-gray-400">{play.artistName} &middot; {play.albumName}</p>
+						<div class="rounded-lg bg-gray-100 p-3 dark:bg-gray-900">
+							<p class="font-medium text-gray-900 dark:text-white">{play.trackName}</p>
+							<p class="text-sm text-gray-600 dark:text-gray-400">{play.artistName} &middot; {play.albumName}</p>
 							<p class="mt-1 text-xs text-gray-500">
 								{play.playedAt.toLocaleString()}
 							</p>
@@ -389,13 +388,13 @@
 		{/if}
 
 	{:else if activeTab === 'history'}
-		<div class="flex items-center gap-2 text-sm text-gray-400">
+		<div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
 			<span>Time window:</span>
 			{#each HISTORY_WINDOWS as window}
 				<button
 					class="rounded px-2 py-1 {historyWindow === window
 						? 'bg-green-600 text-white'
-						: 'bg-gray-800 text-gray-400 hover:text-white'}"
+						: 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:text-white'}"
 					onclick={() => handleHistoryWindowChange(window)}
 				>
 					{window.label}
@@ -411,9 +410,9 @@
 			<div class="grid gap-6 lg:grid-cols-2">
 				<div class="space-y-3">
 					{#each historyResult.plays as play}
-						<div class="rounded-lg bg-gray-900 p-3">
-							<p class="font-medium text-white">{play.trackName}</p>
-							<p class="text-sm text-gray-400">{play.artistName} &middot; {play.albumName}</p>
+						<div class="rounded-lg bg-gray-100 p-3 dark:bg-gray-900">
+							<p class="font-medium text-gray-900 dark:text-white">{play.trackName}</p>
+							<p class="text-sm text-gray-600 dark:text-gray-400">{play.artistName} &middot; {play.albumName}</p>
 							<p class="mt-1 text-xs text-gray-500">
 								{play.playedAt.toLocaleString()}
 							</p>

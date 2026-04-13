@@ -129,9 +129,9 @@
 		class="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 pt-[15vh] sm:pt-20"
 		onclick={handleOverlayClick}
 	>
-		<div class="w-full max-w-2xl rounded-xl bg-gray-900 shadow-2xl ring-1 ring-white/10">
-			<div class="flex items-center gap-3 border-b border-gray-700 px-4 py-3">
-				<svg class="h-5 w-5 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+		<div class="w-full max-w-2xl rounded-xl bg-white shadow-2xl ring-1 ring-gray-900/10 dark:bg-gray-900 dark:ring-white/10">
+			<div class="flex items-center gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+				<svg class="h-5 w-5 shrink-0 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
 						d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
 				</svg>
@@ -141,18 +141,18 @@
 					oninput={handleInput}
 					type="text"
 					placeholder="Search or type a command..."
-					class="flex-1 bg-transparent text-white placeholder-gray-500 outline-none"
+					class="flex-1 bg-transparent text-gray-900 placeholder-gray-400 outline-none dark:text-white dark:placeholder-gray-500"
 				/>
 				<select
 					bind:value={mode}
 					onchange={handleInput}
-					class="hidden rounded bg-gray-800 px-2 py-1 text-sm text-gray-300 outline-none sm:block"
+					class="hidden rounded bg-gray-100 px-2 py-1 text-sm text-gray-700 outline-none dark:bg-gray-800 dark:text-gray-300 sm:block"
 				>
 					<option value="track">Track</option>
 					<option value="artist">Artist</option>
 					<option value="both">Both</option>
 				</select>
-				<kbd class="hidden rounded bg-gray-700 px-1.5 py-0.5 text-xs text-gray-400 sm:inline">ESC</kbd>
+				<kbd class="hidden rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-400 sm:inline">ESC</kbd>
 			</div>
 
 			<div class="max-h-[60vh] overflow-y-auto p-2 sm:max-h-96">
@@ -161,7 +161,7 @@
 						<p class="px-2 pb-1 text-xs font-medium uppercase text-gray-500">Commands</p>
 						{#each filteredCommands as cmd, i}
 							<button
-								class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-800 {i === selectedNavIndex ? 'bg-gray-800 text-white' : 'text-gray-300'}"
+								class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 {i === selectedNavIndex ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white' : 'text-gray-700 dark:text-gray-300'}"
 								onclick={() => commandActions[cmd.id]?.()}
 							>
 								<span class="text-base">{cmd.icon}</span>

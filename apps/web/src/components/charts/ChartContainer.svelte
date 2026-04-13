@@ -15,9 +15,9 @@
 	}
 </script>
 
-<div class="rounded-xl border border-gray-700 bg-gray-900 p-4">
+<div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
 	<div class="mb-3 flex items-center justify-between">
-		<h3 class="text-lg font-semibold text-white">{config.title}</h3>
+		<h3 class="text-lg font-semibold text-gray-900 dark:text-white">{config.title}</h3>
 		{#if config.data.length > 0}
 			<ChartExportButtons {config} />
 		{/if}
