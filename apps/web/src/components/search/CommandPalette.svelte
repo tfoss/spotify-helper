@@ -1,43 +1,59 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { authStore } from '$lib/stores/auth';
+	import { dbStore } from '$lib/stores/db';
+	import { syncStore } from '$lib/stores/sync';
+	import { SpotifyClient } from '$lib/spotify/client';
 	import { search } from '$lib/stores/search';
+	import { PALETTE_COMMANDS, filterCommands, isPaletteToggleEvent } from '$lib/palette/commands';
 	import SearchResults from './SearchResults.svelte';
 	import type { SearchMode } from '$lib/search/types';
-	import type { DbExecutor } from '$lib/db/types';
 
-	export let exec: DbExecutor | null = null;
-	export let onSync: (() => void) | null = null;
+	// ---------------------------------------------------------------------------
+	// State
+	// ---------------------------------------------------------------------------
 
-	let open = false;
-	let inputEl: HTMLInputElement;
-	let query = '';
-	let mode: SearchMode = 'track';
-	let selectedNavIndex = -1;
+	let open = $state(false);
+	let inputEl = $state<HTMLInputElement | undefined>(undefined);
+	let query = $state('');
+	let mode = $state<SearchMode>('track');
+	let selectedNavIndex = $state(-1);
 
-	interface NavCommand {
-		label: string;
-		description: string;
-		action: () => void;
-		icon: string;
-	}
+	// ---------------------------------------------------------------------------
+	// Commands — map command IDs to runtime actions
+	// ---------------------------------------------------------------------------
 
-	const navCommands: NavCommand[] = [
-		{ label: 'Go to Search', description: 'Search your playlists', action: () => navigate('/search'), icon: '🔍' },
-		{ label: 'Go to Analytics', description: 'View listening analytics', action: () => navigate('/analytics'), icon: '📊' },
-		{ label: 'Sync Library', description: 'Sync playlists from Spotify', action: () => { closePalette(); onSync?.(); }, icon: '🔄' },
-	];
+	const commandActions: Record<string, () => void> = {
+		'nav:search': () => navigate('/search'),
+		'nav:analytics': () => navigate('/analytics'),
+		'action:sync': () => triggerSync(),
+	};
 
-	$: filteredNavCommands = query.trim()
-		? navCommands.filter((cmd) => cmd.label.toLowerCase().includes(query.toLowerCase()))
-		: navCommands;
+	let filteredCommands = $derived(filterCommands(PALETTE_COMMANDS, query));
 
-	$: showNavCommands = filteredNavCommands.length > 0;
+	let showNavCommands = $derived(filteredCommands.length > 0 && !$search.results);
+
+	// ---------------------------------------------------------------------------
+	// Actions
+	// ---------------------------------------------------------------------------
 
 	function navigate(path: string) {
 		closePalette();
 		goto(path);
+	}
+
+	function triggerSync() {
+		closePalette();
+		const auth = get(authStore);
+		const db = get(dbStore);
+		if (!auth.isAuthenticated || !auth.accessToken || !db.isReady || !db.executor) return;
+		const client = new SpotifyClient(
+			() => get(authStore).accessToken,
+			() => authStore.refreshAccessToken(),
+		);
+		syncStore.startSync(client, db.executor);
 	}
 
 	function openPalette() {
@@ -53,32 +69,45 @@
 		search.clearSearch();
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
-		if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-			e.preventDefault();
-			open ? closePalette() : openPalette();
-		}
-		if (e.key === 'Escape' && open) {
-			closePalette();
-		}
-		if (open && e.key === 'ArrowDown') {
-			e.preventDefault();
-			selectedNavIndex = Math.min(selectedNavIndex + 1, filteredNavCommands.length - 1);
-		}
-		if (open && e.key === 'ArrowUp') {
-			e.preventDefault();
-			selectedNavIndex = Math.max(selectedNavIndex - 1, -1);
-		}
-		if (open && e.key === 'Enter' && selectedNavIndex >= 0) {
-			e.preventDefault();
-			filteredNavCommands[selectedNavIndex].action();
-		}
-	}
+	// ---------------------------------------------------------------------------
+	// Search
+	// ---------------------------------------------------------------------------
 
 	function handleInput() {
 		selectedNavIndex = -1;
-		if (!exec) return;
-		search.performSearch({ query, mode }, exec);
+		const { executor } = get(dbStore);
+		if (!executor || !query.trim()) {
+			search.clearSearch();
+			return;
+		}
+		search.performSearch({ query, mode }, executor);
+	}
+
+	// ---------------------------------------------------------------------------
+	// Keyboard
+	// ---------------------------------------------------------------------------
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (isPaletteToggleEvent(e)) {
+			e.preventDefault();
+			open ? closePalette() : openPalette();
+			return;
+		}
+		if (!open) return;
+		if (e.key === 'Escape') {
+			closePalette();
+			return;
+		}
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			selectedNavIndex = Math.min(selectedNavIndex + 1, filteredCommands.length - 1);
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			selectedNavIndex = Math.max(selectedNavIndex - 1, -1);
+		} else if (e.key === 'Enter' && selectedNavIndex >= 0) {
+			e.preventDefault();
+			commandActions[filteredCommands[selectedNavIndex].id]?.();
+		}
 	}
 
 	function handleOverlayClick(e: MouseEvent) {
@@ -95,10 +124,10 @@
 </script>
 
 {#if open}
-	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 pt-[15vh] sm:pt-20"
-		on:click={handleOverlayClick}
+		onclick={handleOverlayClick}
 	>
 		<div class="w-full max-w-2xl rounded-xl bg-gray-900 shadow-2xl ring-1 ring-white/10">
 			<div class="flex items-center gap-3 border-b border-gray-700 px-4 py-3">
@@ -109,14 +138,14 @@
 				<input
 					bind:this={inputEl}
 					bind:value={query}
-					on:input={handleInput}
+					oninput={handleInput}
 					type="text"
 					placeholder="Search or type a command..."
 					class="flex-1 bg-transparent text-white placeholder-gray-500 outline-none"
 				/>
 				<select
 					bind:value={mode}
-					on:change={handleInput}
+					onchange={handleInput}
 					class="hidden rounded bg-gray-800 px-2 py-1 text-sm text-gray-300 outline-none sm:block"
 				>
 					<option value="track">Track</option>
@@ -127,13 +156,13 @@
 			</div>
 
 			<div class="max-h-[60vh] overflow-y-auto p-2 sm:max-h-96">
-				{#if showNavCommands && !$search.results}
+				{#if showNavCommands}
 					<div class="mb-2">
 						<p class="px-2 pb-1 text-xs font-medium uppercase text-gray-500">Commands</p>
-						{#each filteredNavCommands as cmd, i}
+						{#each filteredCommands as cmd, i}
 							<button
 								class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-800 {i === selectedNavIndex ? 'bg-gray-800 text-white' : 'text-gray-300'}"
-								on:click={cmd.action}
+								onclick={() => commandActions[cmd.id]?.()}
 							>
 								<span class="text-base">{cmd.icon}</span>
 								<div>
@@ -146,7 +175,11 @@
 				{/if}
 
 				{#if query.trim()}
-					<SearchResults results={$search.results} isSearching={$search.isSearching} error={$search.error} />
+					<SearchResults
+						results={$search.results}
+						isSearching={$search.isSearching}
+						error={$search.error}
+					/>
 				{/if}
 			</div>
 		</div>
