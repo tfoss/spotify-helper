@@ -60,4 +60,67 @@ test.describe('App Smoke Test', () => {
 
 		expect(jsErrors).toEqual([]);
 	});
+
+	test('analytics/genre page loads without JS errors', async ({ page }) => {
+		const jsErrors: string[] = [];
+		page.on('pageerror', (error) => {
+			jsErrors.push(error.message);
+		});
+
+		await page.goto('/analytics/genre');
+		await page.waitForLoadState('networkidle');
+
+		const heading = page.getByRole('heading', { name: /genre distribution/i });
+		await expect(heading).toBeVisible();
+
+		expect(jsErrors).toEqual([]);
+	});
+
+	test('analytics/era page loads without JS errors', async ({ page }) => {
+		const jsErrors: string[] = [];
+		page.on('pageerror', (error) => {
+			jsErrors.push(error.message);
+		});
+
+		await page.goto('/analytics/era');
+		await page.waitForLoadState('networkidle');
+
+		const heading = page.getByRole('heading', { name: /era heatmap/i });
+		await expect(heading).toBeVisible();
+
+		expect(jsErrors).toEqual([]);
+	});
+
+	test('analytics/overlap page loads without JS errors', async ({ page }) => {
+		const jsErrors: string[] = [];
+		page.on('pageerror', (error) => {
+			jsErrors.push(error.message);
+		});
+
+		await page.goto('/analytics/overlap');
+		await page.waitForLoadState('networkidle');
+
+		const heading = page.getByRole('heading', { name: /playlist overlap/i });
+		await expect(heading).toBeVisible();
+
+		expect(jsErrors).toEqual([]);
+	});
+
+	test('auth/callback page renders processing state for missing code param', async ({ page }) => {
+		const jsErrors: string[] = [];
+		page.on('pageerror', (error) => {
+			jsErrors.push(error.message);
+		});
+
+		// Navigate without code/state params — should render error state, not crash
+		await page.goto('/auth/callback');
+		await page.waitForLoadState('networkidle');
+
+		// Should show either an error message or the processing spinner — but NOT a crash
+		const hasProcessing = await page.getByText(/connecting to spotify/i).isVisible().catch(() => false);
+		const hasError = await page.getByRole('heading', { name: /authentication failed/i }).isVisible().catch(() => false);
+
+		expect(hasProcessing || hasError).toBe(true);
+		expect(jsErrors).toEqual([]);
+	});
 });
