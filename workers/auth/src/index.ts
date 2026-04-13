@@ -1,6 +1,5 @@
 interface Env {
 	SPOTIFY_CLIENT_ID: string;
-	SPOTIFY_CLIENT_SECRET: string;
 	ALLOWED_ORIGIN: string;
 }
 
@@ -57,7 +56,6 @@ async function handleExchange(request: Request, env: Env): Promise<Response> {
 		code,
 		redirect_uri,
 		client_id: env.SPOTIFY_CLIENT_ID,
-		client_secret: env.SPOTIFY_CLIENT_SECRET,
 		code_verifier,
 	});
 
@@ -104,7 +102,6 @@ async function handleRefresh(request: Request, env: Env): Promise<Response> {
 		grant_type: 'refresh_token',
 		refresh_token,
 		client_id: env.SPOTIFY_CLIENT_ID,
-		client_secret: env.SPOTIFY_CLIENT_SECRET,
 	});
 
 	const spotifyResponse = await fetch(SPOTIFY_TOKEN_URL, {
