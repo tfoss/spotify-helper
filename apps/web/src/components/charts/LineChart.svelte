@@ -54,7 +54,7 @@
 					tickLabelProps={{ ...tickLabelProps, rotate: -35, textAnchor: 'end' }}
 					{labelProps}
 				/>
-				<Spline class="stroke-green-400 stroke-2" />
+				<Spline class="stroke-green-400 stroke-2" fill="none" />
 			</Svg>
 		</Chart>
 	</div>

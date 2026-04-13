@@ -46,6 +46,7 @@
 					placement="bottom"
 					label={config.xLabel}
 					rule={ruleProps}
+					ticks={10}
 					tickLabelProps={{ ...tickLabelProps, rotate: -35, textAnchor: 'end' }}
 					{labelProps}
 				/>
