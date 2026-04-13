@@ -5,6 +5,7 @@
 	import { authStore } from '$lib/stores/auth';
 	import { dbStore } from '$lib/stores/db';
 	import { syncStore } from '$lib/stores/sync';
+	import { darkMode } from '$lib/stores/darkMode';
 	import { SpotifyClient } from '$lib/spotify/client';
 	import { page } from '$app/stores';
 	import SyncStatus from '$components/shared/SyncStatus.svelte';
@@ -34,6 +35,7 @@
 
 	onMount(() => {
 		dbStore.initialize();
+		darkMode.initialize();
 	});
 
 	// Auto-sync when both auth and DB are ready
@@ -57,16 +59,18 @@
 	function closeMobileMenu() {
 		mobileMenuOpen = false;
 	}
+
+	let isDark = $derived($darkMode === 'dark');
 </script>
 
-<div class="min-h-screen bg-gray-950 text-white">
-	<nav class="border-b border-gray-800 bg-gray-900">
+<div class="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white">
+	<nav class="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 			<div class="flex h-16 items-center justify-between">
 				<div class="flex items-center gap-4 sm:gap-8">
 					<!-- Hamburger button (mobile only) -->
 					<button
-						class="text-gray-400 hover:text-white md:hidden"
+						class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white md:hidden"
 						onclick={toggleMobileMenu}
 						aria-label="Open menu"
 					>
@@ -75,46 +79,67 @@
 						</svg>
 					</button>
 
-					<a href="/" class="text-xl font-bold text-green-400">Spotify Helper</a>
+					<a href="/" class="text-xl font-bold text-green-600 dark:text-green-400">Spotify Helper</a>
 
 					<!-- Desktop nav links -->
 					<div class="hidden gap-1 md:flex">
 						<a
 							href="/search"
 							class="rounded-md px-3 py-2 text-sm font-medium transition-colors {isActive('/search')
-								? 'bg-gray-800 text-green-400'
-								: 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+								? 'bg-gray-100 text-green-600 dark:bg-gray-800 dark:text-green-400'
+								: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}"
 						>
 							Search
 						</a>
 						<a
 							href="/analytics"
 							class="rounded-md px-3 py-2 text-sm font-medium transition-colors {isActive('/analytics')
-								? 'bg-gray-800 text-green-400'
-								: 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+								? 'bg-gray-100 text-green-600 dark:bg-gray-800 dark:text-green-400'
+								: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}"
 						>
 							Analytics
 						</a>
 						<a
 							href="/orphaned"
 							class="rounded-md px-3 py-2 text-sm font-medium transition-colors {isActive('/orphaned')
-								? 'bg-gray-800 text-green-400'
-								: 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+								? 'bg-gray-100 text-green-600 dark:bg-gray-800 dark:text-green-400'
+								: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}"
 						>
 							Orphaned
 						</a>
 					</div>
 				</div>
 
-				<div class="flex items-center gap-4">
+				<div class="flex items-center gap-3">
 					{#if $authStore.isAuthenticated}
 						<SyncStatus onSync={triggerSync} />
 					{/if}
+
 					<!-- CMD+K hint (desktop only) -->
 					<div class="hidden items-center gap-2 md:flex">
-						<kbd class="rounded border border-gray-700 bg-gray-800 px-2 py-1 text-xs text-gray-400">⌘K</kbd>
-						<span class="text-xs text-gray-500">Search</span>
+						<kbd class="rounded border border-gray-300 bg-gray-100 px-2 py-1 text-xs text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">⌘K</kbd>
+						<span class="text-xs text-gray-400 dark:text-gray-500">Search</span>
 					</div>
+
+					<!-- Dark mode toggle -->
+					<button
+						onclick={() => darkMode.toggle()}
+						class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+						aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+						title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+					>
+						{#if isDark}
+							<!-- Sun icon -->
+							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+							</svg>
+						{:else}
+							<!-- Moon icon -->
+							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+							</svg>
+						{/if}
+					</button>
 				</div>
 			</div>
 		</div>
