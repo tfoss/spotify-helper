@@ -146,7 +146,7 @@ export default {
 
 		// Validate origin for non-OPTIONS requests
 		if (!validateOrigin(request, env.ALLOWED_ORIGIN)) {
-			return new Response('Forbidden', { status: 403 });
+			return errorResponse('Forbidden', 403, env.ALLOWED_ORIGIN);
 		}
 
 		if (request.method !== 'POST') {

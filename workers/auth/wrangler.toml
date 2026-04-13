@@ -1,7 +1,6 @@
 name = "spotify-auth"
 main = "src/index.ts"
-compatibility_date = "2024-12-01"
-compatibility_flags = ["nodejs_compat"]
+compatibility_date = "2024-09-23"
 
 # Production routes (uncomment and configure for custom domain)
 # routes = [
