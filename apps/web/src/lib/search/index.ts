@@ -14,10 +14,10 @@ import {
 import type { SearchQuery, SearchResultItem, SearchResults } from './types';
 
 /**
- * Build the canonical Spotify web URL for a playlist.
+ * Build the Spotify URI for a playlist so it opens in the native app.
  */
 export function buildSpotifyPlaylistUrl(playlistId: string): string {
-	return `https://open.spotify.com/playlist/${playlistId}`;
+	return `spotify:playlist:${playlistId}`;
 }
 
 /**

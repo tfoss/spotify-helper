@@ -45,7 +45,7 @@ export async function getTopArtists(
 		name: artist.name,
 		imageUrl: artist.images?.[0]?.url,
 		popularity: artist.popularity,
-		spotifyUrl: `https://open.spotify.com/artist/${artist.id}`,
+		spotifyUrl: `spotify:artist:${artist.id}`,
 	}));
 
 	return { timeRange, items, source: 'spotify' };
