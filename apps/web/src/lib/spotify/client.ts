@@ -116,4 +116,16 @@ export class SpotifyClient {
 		if (after !== undefined) params.set('after', after.toString());
 		return this.fetch<SpotifyRecentlyPlayed>(`/me/player/recently-played?${params.toString()}`);
 	}
+
+	/**
+	 * Fetch full artist objects for up to 50 IDs in a single request.
+	 *
+	 * @param ids - Array of Spotify artist IDs (max 50 per call).
+	 * @returns Array of artist objects including genres.
+	 */
+	getArtistsByIds(ids: string[]): Promise<{ artists: SpotifyTopArtist[] }> {
+		return this.fetch<{ artists: SpotifyTopArtist[] }>(
+			`/artists?ids=${ids.slice(0, 50).join(',')}`,
+		);
+	}
 }

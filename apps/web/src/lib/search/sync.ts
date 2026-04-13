@@ -9,6 +9,7 @@ import type { SpotifyClient } from '$lib/spotify/client';
 import type { SpotifyPlaylist, SpotifyPlaylistTrack, SpotifyTrack } from '$lib/spotify/types';
 import type { DbExecutor, PlaylistRow } from '$lib/db/types';
 import { upsertPlaylist, upsertTrack, linkPlaylistTrack } from '$lib/db/queries';
+import { upsertArtistGenres } from '$lib/analytics/genre';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,7 +25,7 @@ export interface SyncStats {
 export interface SyncProgress {
 	current: number;
 	total: number;
-	phase: 'fetching_playlists' | 'syncing_playlists';
+	phase: 'fetching_playlists' | 'syncing_playlists' | 'syncing_artists';
 }
 
 export type OnProgress = (progress: SyncProgress) => void;
@@ -50,12 +51,13 @@ export function shouldSyncPlaylist(
 
 /**
  * Transform a Spotify API track into the shape expected by upsertTrack.
- * Joins multiple artist names with ", ".
+ * Joins multiple artist names with ", " and stores the primary artist's ID.
  */
 export function transformSpotifyTrack(spotifyTrack: SpotifyTrack): {
 	id: string;
 	name: string;
 	artist_name: string;
+	artist_id: string | null;
 	album_name: string;
 	duration_ms: number;
 	popularity: number;
@@ -65,6 +67,7 @@ export function transformSpotifyTrack(spotifyTrack: SpotifyTrack): {
 		id: spotifyTrack.id,
 		name: spotifyTrack.name,
 		artist_name: spotifyTrack.artists.map((a) => a.name).join(', '),
+		artist_id: spotifyTrack.artists[0]?.id ?? null,
 		album_name: spotifyTrack.album.name,
 		duration_ms: spotifyTrack.duration_ms,
 		popularity: spotifyTrack.popularity,
@@ -102,12 +105,53 @@ async function clearPlaylistTracks(exec: DbExecutor, playlistId: string): Promis
 // ---------------------------------------------------------------------------
 
 /**
+ * Sync artist genres for a set of artist IDs.
+ *
+ * Fetches artist details (including genres) from Spotify in batches of 50
+ * and stores the genres in the local artist_genres table.
+ *
+ * @param spotifyClient - An authenticated SpotifyClient instance.
+ * @param exec          - Database executor for SQLite operations.
+ * @param artistIds     - Set of Spotify artist IDs to sync genres for.
+ * @param onProgress    - Optional callback for progress updates.
+ */
+export async function syncArtistGenres(
+	spotifyClient: SpotifyClient,
+	exec: DbExecutor,
+	artistIds: Set<string>,
+	onProgress?: OnProgress,
+): Promise<void> {
+	const ids = Array.from(artistIds).filter(Boolean);
+	if (ids.length === 0) return;
+
+	const BATCH_SIZE = 50;
+	const batches = Math.ceil(ids.length / BATCH_SIZE);
+
+	console.debug('[Sync] Syncing genres for %d artists in %d batches', ids.length, batches);
+
+	for (let i = 0; i < batches; i++) {
+		onProgress?.({ current: i + 1, total: batches, phase: 'syncing_artists' });
+
+		const batch = ids.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE);
+		const { artists } = await spotifyClient.getArtistsByIds(batch);
+
+		for (const artist of artists) {
+			if (!artist || !artist.genres || artist.genres.length === 0) continue;
+			await upsertArtistGenres(exec, artist.id, artist.genres);
+		}
+	}
+
+	console.debug('[Sync] Artist genre sync complete');
+}
+
+/**
  * Sync all user playlists from Spotify into the local database.
  *
  * 1. Fetches all user playlists via the Spotify client (handles pagination).
  * 2. Compares each playlist's snapshot_id with the local DB.
  * 3. Skips playlists whose snapshot_id is unchanged.
  * 4. For new/changed playlists: fetches tracks, upserts everything.
+ * 5. Syncs artist genres for all artists found during the sync.
  *
  * @param spotifyClient - An authenticated SpotifyClient instance.
  * @param exec          - Database executor for SQLite operations.
@@ -134,6 +178,9 @@ export async function syncPlaylists(
 		playlistsSkipped: 0,
 		tracksUpserted: 0
 	};
+
+	// Collect unique artist IDs encountered during this sync for genre fetching
+	const artistIds = new Set<string>();
 
 	// Phase 2: Sync each playlist
 	for (let i = 0; i < spotifyPlaylists.length; i++) {
@@ -178,6 +225,9 @@ export async function syncPlaylists(
 			const trackData = transformSpotifyTrack(playlistTrack.track);
 			await upsertTrack(exec, trackData);
 
+			// Collect artist ID for genre sync
+			if (trackData.artist_id) artistIds.add(trackData.artist_id);
+
 			const addedAt = playlistTrack.added_at
 				? new Date(playlistTrack.added_at).getTime()
 				: null;
@@ -187,6 +237,11 @@ export async function syncPlaylists(
 		}
 
 		stats.playlistsSynced++;
+	}
+
+	// Phase 3: Sync artist genres for all artists encountered
+	if (artistIds.size > 0) {
+		await syncArtistGenres(spotifyClient, exec, artistIds, onProgress);
 	}
 
 	console.debug(

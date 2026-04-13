@@ -66,7 +66,7 @@ export async function getTopTracks(
 		id: track.id,
 		name: track.name,
 		popularity: track.popularity,
-		spotifyUrl: `https://open.spotify.com/track/${track.id}`,
+		spotifyUrl: `spotify:track:${track.id}`,
 	}));
 
 	return { timeRange, items, source: 'spotify' };
@@ -134,6 +134,7 @@ export async function persistRecentPlays(
 			id: play.trackId,
 			name: play.trackName,
 			artist_name: play.artistName,
+			artist_id: null,
 			album_name: play.albumName,
 			duration_ms: null,
 			popularity: null,
