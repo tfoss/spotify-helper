@@ -146,7 +146,9 @@ function createAuthStore() {
 
 	/**
 	 * Refresh the access token using the stored refresh token.
-	 * On 401, retries exactly once before failing cleanly.
+	 * - On 4xx: token is invalid — call logout() to clear storage and force re-login.
+	 * - On 5xx or network error: transient failure — preserve token, show retry message.
+	 * - On 401 specifically: retries exactly once before treating as a 4xx logout.
 	 */
 	async function refreshAccessToken(isRetry: boolean = false): Promise<void> {
 		const refreshToken = getRefreshToken();
@@ -155,45 +157,18 @@ function createAuthStore() {
 			return;
 		}
 
+		// Separate the network fetch from HTTP status handling so we can distinguish
+		// a rejected Promise (network error) from a resolved Response with a 4xx/5xx code.
+		let response: Response;
 		try {
-			const response = await fetch(`${config.authWorkerUrl}/refresh`, {
+			response = await fetch(`${config.authWorkerUrl}/refresh`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ refresh_token: refreshToken })
 			});
-
-			if (response.status === 401 && !isRetry) {
-				await refreshAccessToken(true);
-				return;
-			}
-
-			if (!response.ok) {
-				throw new Error(`Token refresh failed (${response.status})`);
-			}
-
-			const data = (await response.json()) as {
-				access_token: string;
-				refresh_token?: string;
-				expires_in: number;
-			};
-
-			const expiresAt = Date.now() + data.expires_in * 1000;
-
-			if (data.refresh_token) {
-				storeRefreshToken(data.refresh_token);
-			}
-
-			set({
-				isAuthenticated: true,
-				accessToken: data.access_token,
-				expiresAt,
-				error: null
-			});
-
-			scheduleRefresh(expiresAt);
-		} catch (err) {
-			// Network errors (e.g. worker down during dev HMR) should not
-			// destroy the refresh token. Only clear auth state, not storage.
+		} catch (_err) {
+			// Network error (worker unreachable, DNS failure, etc.) — preserve the
+			// refresh token so the user is not forced to re-login on the next load.
 			update((s) => ({
 				...s,
 				isAuthenticated: false,
@@ -201,7 +176,53 @@ function createAuthStore() {
 				expiresAt: null,
 				error: 'Could not refresh token — will retry on next page load'
 			}));
+			return;
 		}
+
+		// 401: retry exactly once — the worker may have just rotated its signing key.
+		if (response.status === 401 && !isRetry) {
+			await refreshAccessToken(true);
+			return;
+		}
+
+		// 4xx: the refresh token is genuinely invalid — clear storage and force re-login.
+		if (response.status >= 400 && response.status < 500) {
+			logout();
+			return;
+		}
+
+		// 5xx: server-side error — preserve the token and let the user retry later.
+		if (!response.ok) {
+			update((s) => ({
+				...s,
+				isAuthenticated: false,
+				accessToken: null,
+				expiresAt: null,
+				error: 'Could not refresh token — will retry on next page load'
+			}));
+			return;
+		}
+
+		const data = (await response.json()) as {
+			access_token: string;
+			refresh_token?: string;
+			expires_in: number;
+		};
+
+		const expiresAt = Date.now() + data.expires_in * 1000;
+
+		if (data.refresh_token) {
+			storeRefreshToken(data.refresh_token);
+		}
+
+		set({
+			isAuthenticated: true,
+			accessToken: data.access_token,
+			expiresAt,
+			error: null
+		});
+
+		scheduleRefresh(expiresAt);
 	}
 
 	/**
