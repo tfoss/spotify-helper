@@ -53,6 +53,13 @@
 				>
 					Analytics
 				</a>
+				<a
+					href="/orphaned"
+					on:click={navTo}
+					class="rounded-lg px-3 py-2.5 text-sm font-medium {isActive('/orphaned') ? 'bg-gray-800 text-green-400' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+				>
+					Orphaned
+				</a>
 			</nav>
 
 			<div class="absolute bottom-0 left-0 right-0 border-t border-gray-800 p-4">

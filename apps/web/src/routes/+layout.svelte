@@ -95,6 +95,14 @@
 						>
 							Analytics
 						</a>
+						<a
+							href="/orphaned"
+							class="rounded-md px-3 py-2 text-sm font-medium transition-colors {isActive('/orphaned')
+								? 'bg-gray-800 text-green-400'
+								: 'text-gray-300 hover:bg-gray-800 hover:text-white'}"
+						>
+							Orphaned
+						</a>
 					</div>
 				</div>
 

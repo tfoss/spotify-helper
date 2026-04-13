@@ -342,3 +342,36 @@ export async function countPlaysByHour(
   const rows = await exec(sql, [since]);
   return rows as unknown as { hour: number; play_count: number }[];
 }
+
+// ---------------------------------------------------------------------------
+// Orphaned tracks
+// ---------------------------------------------------------------------------
+
+/** A track that is not linked to any playlist. */
+export interface OrphanedTrack {
+  id: string;
+  name: string;
+  artist_name: string;
+  album_name: string;
+}
+
+/**
+ * Return all tracks that have no row in `playlist_tracks`.
+ *
+ * These are tracks that were synced (e.g. from recent plays) but are not
+ * part of any saved playlist.
+ *
+ * @param exec - Database executor.
+ * @returns Orphaned track rows sorted by name.
+ */
+export async function getOrphanedTracks(exec: DbExecutor): Promise<OrphanedTrack[]> {
+  const sql = `
+    SELECT t.id, t.name, t.artist_name, t.album_name
+    FROM tracks t
+    LEFT JOIN playlist_tracks pt ON pt.track_id = t.id
+    WHERE pt.track_id IS NULL
+    ORDER BY t.name_lower;`;
+
+  const rows = await exec(sql, []);
+  return rows as unknown as OrphanedTrack[];
+}
