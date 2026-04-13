@@ -270,6 +270,93 @@ describe('refreshAccessToken — 401 retry behavior', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Token refresh — 4xx clears token; 5xx / network error preserves token
+// ---------------------------------------------------------------------------
+
+describe('refreshAccessToken — error classification', () => {
+	it('calls logout() on 400 — clears refresh token from storage', async () => {
+		localStorage.setItem('spotify_refresh_token', 'bad-refresh');
+
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({
+			ok: false,
+			status: 400,
+			json: async () => ({})
+		}));
+
+		await authStore.refreshAccessToken();
+
+		// Refresh token must be cleared — user should be forced to re-login
+		expect(getRefreshToken()).toBeNull();
+		const state = get(authStore);
+		expect(state.isAuthenticated).toBe(false);
+		expect(state.accessToken).toBeNull();
+	});
+
+	it('calls logout() on 403 — clears refresh token from storage', async () => {
+		localStorage.setItem('spotify_refresh_token', 'forbidden-refresh');
+
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({
+			ok: false,
+			status: 403,
+			json: async () => ({})
+		}));
+
+		await authStore.refreshAccessToken();
+
+		expect(getRefreshToken()).toBeNull();
+		expect(get(authStore).isAuthenticated).toBe(false);
+	});
+
+	it('preserves refresh token on 500 — server-side transient error', async () => {
+		localStorage.setItem('spotify_refresh_token', 'valid-refresh');
+
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({
+			ok: false,
+			status: 500,
+			json: async () => ({})
+		}));
+
+		await authStore.refreshAccessToken();
+
+		// Token must NOT be cleared — user should auto-recover on next load
+		expect(getRefreshToken()).toBe('valid-refresh');
+		const state = get(authStore);
+		expect(state.isAuthenticated).toBe(false);
+		expect(state.error).toMatch(/retry on next page load/i);
+	});
+
+	it('preserves refresh token on network error (fetch throws)', async () => {
+		localStorage.setItem('spotify_refresh_token', 'valid-refresh');
+
+		vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new TypeError('Failed to fetch')));
+
+		await authStore.refreshAccessToken();
+
+		expect(getRefreshToken()).toBe('valid-refresh');
+		const state = get(authStore);
+		expect(state.isAuthenticated).toBe(false);
+		expect(state.error).toMatch(/retry on next page load/i);
+	});
+
+	it('401 retry: on second consecutive 401 (isRetry=true) calls logout()', async () => {
+		localStorage.setItem('spotify_refresh_token', 'stale-refresh');
+
+		let callCount = 0;
+		vi.stubGlobal('fetch', vi.fn().mockImplementation(() => {
+			callCount++;
+			return Promise.resolve({ ok: false, status: 401, json: async () => ({}) });
+		}));
+
+		await authStore.refreshAccessToken();
+
+		expect(callCount).toBe(2);
+		// After two 401s the token should be cleared (logout called)
+		expect(getRefreshToken()).toBeNull();
+		expect(get(authStore).isAuthenticated).toBe(false);
+	});
+});
+
+// ---------------------------------------------------------------------------
 // logout
 // ---------------------------------------------------------------------------
 
