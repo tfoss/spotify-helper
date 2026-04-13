@@ -16,6 +16,14 @@
 	function truncate(label: string, max = 12): string {
 		return label.length > max ? label.slice(0, max - 1) + '…' : label;
 	}
+
+	// SVG-attribute props for dark-theme readability.
+	// Tailwind classes don't reach LayerChart's internal SVG text, so we use
+	// raw SVG fill/stroke/font-size attributes passed through to the <text>/<line>.
+	const tickLabelProps = { fill: '#9ca3af', 'font-size': 12 };
+	const labelProps = { fill: '#d1d5db', 'font-size': 13 };
+	const ruleProps = { stroke: '#374151' };
+	const gridProps = { stroke: '#1f2937' };
 </script>
 
 {#if data.length === 0}
@@ -27,18 +35,18 @@
 				<Axis
 					placement="left"
 					label={config.yLabel}
-					grid={{ class: 'stroke-gray-800' }}
-					rule={{ class: 'stroke-gray-700' }}
-					tickLabelProps={{ class: 'fill-gray-400 text-xs' }}
-					labelProps={{ class: 'fill-gray-300 text-xs' }}
+					grid={gridProps}
+					rule={ruleProps}
+					{tickLabelProps}
+					{labelProps}
 				/>
 				<Axis
 					placement="bottom"
 					label={config.xLabel}
-					rule={{ class: 'stroke-gray-700' }}
+					rule={ruleProps}
 					format={(v: string) => truncate(v)}
-					tickLabelProps={{ class: 'fill-gray-400 text-xs', rotate: -35, textAnchor: 'end' }}
-					labelProps={{ class: 'fill-gray-300 text-xs' }}
+					tickLabelProps={{ ...tickLabelProps, rotate: -35, textAnchor: 'end' }}
+					{labelProps}
 				/>
 				<Bars fill="#22c55e" radius={2} />
 			</Svg>
