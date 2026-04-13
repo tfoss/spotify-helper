@@ -4,6 +4,7 @@
 	import LineChart from './LineChart.svelte';
 	import PieChart from './PieChart.svelte';
 	import HistogramChart from './HistogramChart.svelte';
+	import ChartExportButtons from '$components/shared/ChartExportButtons.svelte';
 
 	let { config }: { config: ChartConfig } = $props();
 
@@ -15,7 +16,12 @@
 </script>
 
 <div class="rounded-xl border border-gray-700 bg-gray-900 p-4">
-	<h3 class="mb-3 text-lg font-semibold text-white">{config.title}</h3>
+	<div class="mb-3 flex items-center justify-between">
+		<h3 class="text-lg font-semibold text-white">{config.title}</h3>
+		{#if config.data.length > 0}
+			<ChartExportButtons {config} />
+		{/if}
+	</div>
 
 	{#if renderError}
 		<div class="py-10 text-center text-sm text-red-400">
