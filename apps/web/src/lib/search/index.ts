@@ -10,8 +10,10 @@ import {
 	searchTracksByName,
 	searchTracksByArtist,
 	getPlaylistsForTrack,
+	getAllTracks,
 } from '$lib/db/queries';
 import type { SearchQuery, SearchResultItem, SearchResults } from './types';
+import { fuzzyFilterTracks } from './fuzzy';
 
 /**
  * Build the Spotify URI for a playlist so it opens in the native app.
@@ -89,6 +91,26 @@ export async function searchPlaylists(
 
 	if (!query.query.trim()) {
 		return { query, items: [], totalMatches: 0, searchTimeMs: 0 };
+	}
+
+	// Fuzzy mode: fetch all tracks in memory and apply Levenshtein scoring
+	if (query.fuzzy) {
+		const allTracks = await getAllTracks(exec);
+		const scored = fuzzyFilterTracks(allTracks, query.query);
+		const items: SearchResultItem[] = [];
+		for (const { track, score } of scored) {
+			const playlists = await getPlaylistsForTrack(exec, track.id);
+			for (const playlist of playlists) {
+				items.push({
+					...toResultItem(track, playlist, 'fuzzy'),
+					fuzzyScore: score,
+				});
+			}
+		}
+		const deduped = deduplicateItems(items);
+		const searchTimeMs = Math.round(performance.now() - start);
+		console.debug('[Search] fuzzy query="%s" → %d results (%dms)', query.query, deduped.length, searchTimeMs);
+		return { query, items: deduped, totalMatches: deduped.length, searchTimeMs };
 	}
 
 	let items: SearchResultItem[] = [];

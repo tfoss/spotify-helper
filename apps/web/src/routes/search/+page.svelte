@@ -13,6 +13,7 @@
 	let trackQuery = $state('');
 	let artistQuery = $state('');
 	let refined = $state(false);
+	let fuzzyMode = $state(false);
 	let playlistCount = $state<number | null>(null);
 	let checkingDb = $state(true);
 
@@ -36,14 +37,14 @@
 	function handleUnifiedSearch() {
 		const { executor } = get(dbStore);
 		if (!executor) return;
-		search.performSearch({ query, mode: 'unified' }, executor);
+		search.performSearch({ query, mode: 'unified', fuzzy: fuzzyMode }, executor);
 	}
 
 	function handleRefinedSearch() {
 		const { executor } = get(dbStore);
 		if (!executor) return;
 		search.performSearch(
-			{ query: trackQuery, mode: 'both', artistQuery: artistQuery || undefined },
+			{ query: trackQuery, mode: 'both', artistQuery: artistQuery || undefined, fuzzy: fuzzyMode },
 			executor,
 		);
 	}
@@ -67,6 +68,11 @@
 			artistQuery = '';
 		}
 		search.clearSearch();
+	}
+
+	function toggleFuzzy() {
+		fuzzyMode = !fuzzyMode;
+		handleInput();
 	}
 
 	function getClient(): SpotifyClient | null {
@@ -198,12 +204,22 @@
 			</div>
 		{/if}
 
-		<button
-			onclick={toggleRefine}
-			class="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-		>
-			{refined ? '← Back to unified search' : 'Refine search (track + artist)'}
-		</button>
+		<div class="flex items-center gap-4">
+			<button
+				onclick={toggleRefine}
+				class="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+			>
+				{refined ? '← Back to unified search' : 'Refine search (track + artist)'}
+			</button>
+			<button
+				onclick={toggleFuzzy}
+				class="flex items-center gap-1.5 text-xs transition-colors {fuzzyMode ? 'text-green-400 hover:text-green-300' : 'text-gray-500 hover:text-gray-300'}"
+				title="Fuzzy match: finds results even with typos"
+			>
+				<span class="inline-block h-2 w-2 rounded-full {fuzzyMode ? 'bg-green-400' : 'bg-gray-600'}"></span>
+				Fuzzy match {fuzzyMode ? '(on)' : '(off)'}
+			</button>
+		</div>
 	</div>
 
 	<!-- Loading state -->

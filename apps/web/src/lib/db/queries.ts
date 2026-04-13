@@ -137,6 +137,18 @@ export async function linkPlaylistTrack(
 // ---------------------------------------------------------------------------
 
 /**
+ * Fetch all tracks from the database for in-memory operations such as fuzzy search.
+ *
+ * @param exec - Database executor.
+ * @returns All track rows ordered by name.
+ */
+export async function getAllTracks(exec: DbExecutor): Promise<TrackRow[]> {
+  const sql = `SELECT * FROM tracks ORDER BY name_lower;`;
+  const rows = await exec(sql);
+  return rows as unknown as TrackRow[];
+}
+
+/**
  * Case-insensitive search for tracks by name.
  *
  * Compares against the pre-computed `name_lower` column using LIKE,
