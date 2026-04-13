@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import seedData from './fixtures/seed-data.json';
+import seedData from './fixtures/seed-data.json' with { type: 'json' };
 
 /**
  * Functional E2E tests with seeded DB fixtures.
@@ -284,23 +284,20 @@ test.describe('Chart axis rendering', () => {
 	});
 
 	test('Test A: BarChart renders axis text inside the SVG', async ({ page }) => {
-		await page.goto('/analytics');
+		// Hit home first so the auth store initializes with the fake refresh token.
+		await page.goto('/');
+		await page.waitForLoadState('networkidle');
+		await page.getByRole('link', { name: 'Analytics' }).first().click();
 		await page.waitForLoadState('networkidle');
 
-		const svg = page.locator('svg').first();
-		await expect(svg).toBeVisible({ timeout: 15000 });
-
-		// Wait until the SVG actually contains <text> elements (tick labels render
+		// Wait until a chart SVG actually contains <text> elements (tick labels render
 		// asynchronously after scale resolution).
 		await page.waitForFunction(
-			() => {
-				const s = document.querySelector('svg');
-				return !!s && s.querySelectorAll('text').length >= 3;
-			},
+			() => document.querySelectorAll('svg text').length >= 3,
 			{ timeout: 15000 },
 		);
 
-		const textCount = await svg.locator('text').count();
+		const textCount = await page.locator('svg text').count();
 		expect(textCount).toBeGreaterThanOrEqual(3);
 
 		// At least one rendered text element must have non-empty content.
@@ -322,14 +319,13 @@ test.describe('Chart axis rendering', () => {
 	});
 
 	test('Test B: Y-axis tick labels have a visible (non-black, non-transparent) fill', async ({ page }) => {
-		await page.goto('/analytics');
+		await page.goto('/');
+		await page.waitForLoadState('networkidle');
+		await page.getByRole('link', { name: 'Analytics' }).first().click();
 		await page.waitForLoadState('networkidle');
 
 		await page.waitForFunction(
-			() => {
-				const s = document.querySelector('svg');
-				return !!s && s.querySelectorAll('text').length >= 3;
-			},
+			() => document.querySelectorAll('svg text').length >= 3,
 			{ timeout: 15000 },
 		);
 
@@ -353,14 +349,13 @@ test.describe('Chart axis rendering', () => {
 	});
 
 	test('Test C: seeded artist names appear on the x-axis', async ({ page }) => {
-		await page.goto('/analytics');
+		await page.goto('/');
+		await page.waitForLoadState('networkidle');
+		await page.getByRole('link', { name: 'Analytics' }).first().click();
 		await page.waitForLoadState('networkidle');
 
 		await page.waitForFunction(
-			() => {
-				const s = document.querySelector('svg');
-				return !!s && s.querySelectorAll('text').length >= 3;
-			},
+			() => document.querySelectorAll('svg text').length >= 3,
 			{ timeout: 15000 },
 		);
 
