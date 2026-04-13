@@ -224,6 +224,164 @@ test.describe('Functional: Authenticated Pages', () => {
 });
 
 // ---------------------------------------------------------------------------
+// sh-rvw: Chart axis rendering (visual/DOM assertions)
+// ---------------------------------------------------------------------------
+
+/**
+ * Intercept Spotify's /me/top/artists with seeded data that includes
+ * `name` and `popularity`. Anything else on api.spotify.com still returns
+ * an empty list so we don't break other flows.
+ */
+async function interceptSpotifyTopArtists(
+	page: import('@playwright/test').Page,
+	artists: Array<{ id: string; name: string; popularity: number }>,
+) {
+	await page.route('**/api.spotify.com/**', async (route) => {
+		const url = route.request().url();
+		if (url.includes('/me/top/artists')) {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					items: artists.map((a) => ({ ...a, images: [] })),
+					total: artists.length,
+					limit: 50,
+					offset: 0,
+				}),
+			});
+			return;
+		}
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({ items: [], total: 0, limit: 50, offset: 0 }),
+		});
+	});
+}
+
+test.describe('Chart axis rendering', () => {
+	const SEEDED_ARTISTS = [
+		{ id: 'a-beirut', name: 'Beirut', popularity: 72 },
+		{ id: 'a-tomwaits', name: 'Tom Waits', popularity: 68 },
+		{ id: 'a-radiohead', name: 'Radiohead', popularity: 85 },
+		{ id: 'a-portishead', name: 'Portishead', popularity: 63 },
+		{ id: 'a-nickcave', name: 'Nick Cave', popularity: 70 },
+	];
+
+	test.beforeEach(async ({ page }) => {
+		await page.route('**/refresh', async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					access_token: 'fake_access_token_for_testing',
+					expires_in: 3600,
+				}),
+			});
+		});
+		await interceptSpotifyTopArtists(page, SEEDED_ARTISTS);
+		await setFakeAuth(page);
+	});
+
+	test('Test A: BarChart renders axis text inside the SVG', async ({ page }) => {
+		await page.goto('/analytics');
+		await page.waitForLoadState('networkidle');
+
+		const svg = page.locator('svg').first();
+		await expect(svg).toBeVisible({ timeout: 15000 });
+
+		// Wait until the SVG actually contains <text> elements (tick labels render
+		// asynchronously after scale resolution).
+		await page.waitForFunction(
+			() => {
+				const s = document.querySelector('svg');
+				return !!s && s.querySelectorAll('text').length >= 3;
+			},
+			{ timeout: 15000 },
+		);
+
+		const textCount = await svg.locator('text').count();
+		expect(textCount).toBeGreaterThanOrEqual(3);
+
+		// At least one rendered text element must have non-empty content.
+		const nonEmptyCount = await page.evaluate(() => {
+			const texts = Array.from(document.querySelectorAll('svg text'));
+			return texts.filter((t) => (t.textContent ?? '').trim().length > 0).length;
+		});
+		expect(nonEmptyCount).toBeGreaterThan(0);
+
+		// None of the text elements should be invisible via fill="none"/"transparent".
+		const invisibleCount = await page.evaluate(() => {
+			const texts = Array.from(document.querySelectorAll('svg text')) as SVGTextElement[];
+			return texts.filter((t) => {
+				const attr = (t.getAttribute('fill') ?? '').toLowerCase();
+				return attr === 'none' || attr === 'transparent';
+			}).length;
+		});
+		expect(invisibleCount).toBe(0);
+	});
+
+	test('Test B: Y-axis tick labels have a visible (non-black, non-transparent) fill', async ({ page }) => {
+		await page.goto('/analytics');
+		await page.waitForLoadState('networkidle');
+
+		await page.waitForFunction(
+			() => {
+				const s = document.querySelector('svg');
+				return !!s && s.querySelectorAll('text').length >= 3;
+			},
+			{ timeout: 15000 },
+		);
+
+		// Collect computed fill for every text node — at least one must be a
+		// visible gray (not black, not transparent, not "none").
+		const visibleFills = await page.evaluate(() => {
+			const texts = Array.from(document.querySelectorAll('svg text')) as SVGTextElement[];
+			return texts
+				.map((t) => window.getComputedStyle(t).fill)
+				.filter((fill) => {
+					const f = fill.trim().toLowerCase();
+					if (!f || f === 'none' || f === 'transparent') return false;
+					if (f === 'rgb(0, 0, 0)' || f === '#000' || f === '#000000' || f === 'black') return false;
+					// rgba(0,0,0,0) → transparent black
+					if (f.startsWith('rgba(0, 0, 0, 0)') || f.startsWith('rgba(0,0,0,0)')) return false;
+					return true;
+				});
+		});
+
+		expect(visibleFills.length).toBeGreaterThan(0);
+	});
+
+	test('Test C: seeded artist names appear on the x-axis', async ({ page }) => {
+		await page.goto('/analytics');
+		await page.waitForLoadState('networkidle');
+
+		await page.waitForFunction(
+			() => {
+				const s = document.querySelector('svg');
+				return !!s && s.querySelectorAll('text').length >= 3;
+			},
+			{ timeout: 15000 },
+		);
+
+		const svgText = (await page.evaluate(() => {
+			const texts = Array.from(document.querySelectorAll('svg text'));
+			return texts.map((t) => (t.textContent ?? '').trim()).join('\n');
+		})) as string;
+
+		// Allow truncation with an ellipsis (e.g. "Radiohea…").
+		const seenNames = SEEDED_ARTISTS.filter((a) => {
+			if (svgText.includes(a.name)) return true;
+			// Accept prefix match in case the chart truncates long labels.
+			const prefix = a.name.slice(0, Math.min(5, a.name.length));
+			return prefix.length >= 3 && svgText.includes(prefix);
+		});
+
+		expect(seenNames.length).toBeGreaterThan(0);
+	});
+});
+
+// ---------------------------------------------------------------------------
 // Test C: Genre and Era pages load
 // ---------------------------------------------------------------------------
 
