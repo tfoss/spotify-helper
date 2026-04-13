@@ -24,8 +24,8 @@ test.describe('Auth Flow', () => {
 			});
 		});
 
-		// Intercept the Worker /token endpoint (exchange)
-		await page.route('**/token', async (route) => {
+		// Intercept the Worker /exchange endpoint (token exchange)
+		await page.route('**/exchange', async (route) => {
 			const body = route.request().postDataJSON();
 			expect(body).toHaveProperty('code');
 			expect(body).toHaveProperty('code_verifier');
