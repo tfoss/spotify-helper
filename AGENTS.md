@@ -229,6 +229,9 @@ Use Agent Mail for all inter-agent communication:
 1. Ensure all tests pass.
 2. Release your file reservations.
 3. Close the bead: `br close <id>`
+   - **IMPORTANT:** Run `br close` in your feature branch — do NOT rely on the commit message reference alone. Beads not closed here will remain open and block epic/parent close later.
+   - If closing a child bead and the parent epic also has all children done, close the parent too: `br close <parent-id>`
+   - If `br close <id>` fails with `"parent issue has N/N open children"`, close the children first, then the parent. Or use `br close <id> --force` to bypass the guard.
 4. Sync beads to JSONL: `br sync --flush-only`
 5. Commit everything (code + `.beads/` changes).
 6. Push your feature branch.
@@ -251,6 +254,7 @@ All worker PRs must be reviewed before merging. The lead agent:
    - Are there files that shouldn't have been modified?
 3. **If issues found:** `gh pr review <PR-number> --request-changes --body "feedback"` and notify the worker via Agent Mail with specific fixes needed.
 4. **If approved:** `gh pr review <PR-number> --approve` then `gh pr merge <PR-number> --merge`
+5. **After merging**, run `br epic close-eligible` to auto-close any parent epics whose children all became closed via the merge. This prevents the "open children" close guard from blocking future cleanup.
 
 ## Session End Checklist
 
