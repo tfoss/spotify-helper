@@ -132,6 +132,50 @@ export async function getEraDataForPlaylist(
 	};
 }
 
+/** A track row returned by drill-down queries. */
+export interface DrillTrack {
+	id: string;
+	name: string;
+	artistName: string;
+	albumName: string;
+}
+
+/**
+ * Fetch all tracks released in a given year, optionally scoped to a playlist.
+ *
+ * @param exec       - Database executor.
+ * @param year       - 4-digit year string (e.g. "1994").
+ * @param playlistId - Optional playlist ID to scope results.
+ * @returns Array of tracks sorted by name.
+ */
+export async function getTracksForYear(
+	exec: DbExecutor,
+	year: string,
+	playlistId: string | null = null,
+): Promise<DrillTrack[]> {
+	const sql = playlistId
+		? `SELECT DISTINCT t.id, t.name, t.artist_name, t.album_name
+		   FROM tracks t
+		   INNER JOIN playlist_tracks pt ON pt.track_id = t.id
+		   WHERE SUBSTR(t.release_date, 1, 4) = ? AND pt.playlist_id = ?
+		   ORDER BY t.name;`
+		: `SELECT DISTINCT t.id, t.name, t.artist_name, t.album_name
+		   FROM tracks t
+		   INNER JOIN playlist_tracks pt ON pt.track_id = t.id
+		   WHERE SUBSTR(t.release_date, 1, 4) = ?
+		   ORDER BY t.name;`;
+
+	const params = playlistId ? [year, playlistId] : [year];
+	const rows = await exec(sql, params);
+
+	return rows.map((r) => ({
+		id: r.id as string,
+		name: r.name as string,
+		artistName: r.artist_name as string,
+		albumName: r.album_name as string,
+	}));
+}
+
 /**
  * Compute era summary statistics from chart data points.
  *

@@ -7,8 +7,9 @@
 		getEraDataAllPlaylists,
 		getEraDataForPlaylist,
 		computeEraSummary,
+		getTracksForYear,
 	} from '$lib/analytics/era';
-	import type { PlaylistSummary, EraResult } from '$lib/analytics/era';
+	import type { PlaylistSummary, EraResult, DrillTrack } from '$lib/analytics/era';
 	import { createReleaseYearChart } from '$lib/charts/config';
 	import type { ChartConfig } from '$lib/charts/types';
 	import DataSourceBadge from '$components/shared/DataSourceBadge.svelte';
@@ -22,6 +23,24 @@
 	let eraResult = $state<EraResult | null>(null);
 	let eraChart = $state<ChartConfig | null>(null);
 	let eraSummary = $state<ReturnType<typeof computeEraSummary> | null>(null);
+
+	// Drill-down state
+	let drillDecade = $state<string | null>(null);
+	let drillYear = $state<string | null>(null);
+	let drillTracks = $state<DrillTrack[]>([]);
+	let drillLoading = $state(false);
+
+	/** Years visible in the current drill level (all years, or filtered to drillDecade). */
+	let visibleYears = $derived(
+		drillDecade && eraResult
+			? eraResult.data.filter((d) => d.label.startsWith(drillDecade!.replace('0s', '')))
+			: (eraResult?.data ?? []),
+	);
+
+	/** The chart config for the currently visible year data. */
+	let visibleChart = $derived(
+		visibleYears.length > 0 ? createReleaseYearChart(visibleYears) : null,
+	);
 
 	async function loadPlaylists() {
 		const { executor } = get(dbStore);
@@ -43,6 +62,9 @@
 
 		loading = true;
 		error = null;
+		drillDecade = null;
+		drillYear = null;
+		drillTracks = [];
 		try {
 			eraResult = selectedPlaylistId
 				? await getEraDataForPlaylist(executor, selectedPlaylistId)
@@ -65,6 +87,52 @@
 	function handlePlaylistChange(playlistId: string | null) {
 		selectedPlaylistId = playlistId;
 		loadEraData();
+	}
+
+	function handleDecadeClick(decade: string) {
+		if (drillDecade === decade) {
+			// Collapse — go back to all-decade view
+			drillDecade = null;
+			drillYear = null;
+			drillTracks = [];
+		} else {
+			drillDecade = decade;
+			drillYear = null;
+			drillTracks = [];
+		}
+	}
+
+	async function handleYearClick(year: string) {
+		if (drillYear === year) {
+			// Collapse
+			drillYear = null;
+			drillTracks = [];
+			return;
+		}
+
+		const { executor } = get(dbStore);
+		if (!executor) return;
+
+		drillYear = year;
+		drillLoading = true;
+		try {
+			drillTracks = await getTracksForYear(executor, year, selectedPlaylistId);
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to load tracks';
+		} finally {
+			drillLoading = false;
+		}
+	}
+
+	function handleBreadcrumbAll() {
+		drillDecade = null;
+		drillYear = null;
+		drillTracks = [];
+	}
+
+	function handleBreadcrumbDecade() {
+		drillYear = null;
+		drillTracks = [];
 	}
 
 	onMount(async () => {
@@ -128,8 +196,27 @@
 			</span>
 		</div>
 
-		<!-- Summary stats -->
-		{#if eraSummary}
+		<!-- Breadcrumb -->
+		{#if drillDecade || drillYear}
+			<nav class="flex items-center gap-2 text-sm text-gray-400">
+				<button onclick={handleBreadcrumbAll} class="hover:text-white">All decades</button>
+				{#if drillDecade}
+					<span>&rsaquo;</span>
+					{#if drillYear}
+						<button onclick={handleBreadcrumbDecade} class="hover:text-white">{drillDecade}</button>
+					{:else}
+						<span class="text-white">{drillDecade}</span>
+					{/if}
+				{/if}
+				{#if drillYear}
+					<span>&rsaquo;</span>
+					<span class="text-white">{drillYear}</span>
+				{/if}
+			</nav>
+		{/if}
+
+		<!-- Summary stats (top level only) -->
+		{#if !drillDecade && eraSummary}
 			<div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
 				{#if eraSummary.oldestYear}
 					<div class="rounded-lg bg-gray-900 p-4">
@@ -152,18 +239,72 @@
 			</div>
 		{/if}
 
-		<!-- Chart -->
+		<!-- Chart + side panel -->
 		<div class="grid gap-6 lg:grid-cols-2">
-			{#if eraChart}
-				<ChartContainer config={eraChart} />
+			<!-- Chart (filtered to current drill level) -->
+			{#if visibleChart}
+				<ChartContainer config={visibleChart} />
 			{/if}
 
-			<!-- Decade breakdown -->
-			{#if eraSummary && eraSummary.decadeDistribution.length > 0}
+			{#if drillYear}
+				<!-- Song list for selected year -->
 				<div class="space-y-3">
-					<h3 class="text-sm font-medium text-gray-400">By Decade</h3>
+					<h3 class="text-sm font-medium text-gray-400">
+						Songs from {drillYear}
+						<span class="ml-1 text-gray-600">({drillTracks.length})</span>
+					</h3>
+					{#if drillLoading}
+						<div class="flex items-center gap-2 py-4 text-sm text-gray-500">
+							<div class="h-4 w-4 animate-spin rounded-full border-2 border-green-400 border-t-transparent"></div>
+							Loading…
+						</div>
+					{:else if drillTracks.length > 0}
+						<div class="max-h-96 space-y-2 overflow-y-auto">
+							{#each drillTracks as track}
+								<div class="rounded-lg bg-gray-900 px-3 py-2">
+									<p class="text-sm font-medium text-white">{track.name}</p>
+									<p class="text-xs text-gray-400">{track.artistName} &middot; {track.albumName}</p>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<p class="text-sm text-gray-500">No tracks found.</p>
+					{/if}
+				</div>
+
+			{:else if drillDecade}
+				<!-- Year list for selected decade -->
+				<div class="space-y-3">
+					<h3 class="text-sm font-medium text-gray-400">
+						Years in {drillDecade} — click a year to see songs
+					</h3>
+					{#each visibleYears as yearPoint}
+						<button
+							class="flex w-full items-center gap-3 rounded-lg bg-gray-900 p-3 text-left hover:bg-gray-800 {drillYear === yearPoint.label ? 'ring-1 ring-green-500' : ''}"
+							onclick={() => handleYearClick(yearPoint.label)}
+						>
+							<span class="w-12 text-sm font-bold text-gray-400">{yearPoint.label}</span>
+							<div class="flex-1">
+								<div
+									class="h-3 rounded bg-green-600"
+									style="width: {Math.max((yearPoint.value / Math.max(...visibleYears.map(y => y.value))) * 100, 4)}%"
+								></div>
+							</div>
+							<span class="w-10 text-right text-sm text-gray-400">{yearPoint.value}</span>
+							<span class="text-xs text-gray-600">&rsaquo;</span>
+						</button>
+					{/each}
+				</div>
+
+			{:else if eraSummary && eraSummary.decadeDistribution.length > 0}
+				<!-- Default: decade breakdown — click to drill in -->
+				<div class="space-y-3">
+					<h3 class="text-sm font-medium text-gray-400">By Decade — click to expand</h3>
 					{#each eraSummary.decadeDistribution as decade}
-						<div class="flex items-center gap-3 rounded-lg bg-gray-900 p-3">
+						<button
+							class="flex w-full items-center gap-3 rounded-lg bg-gray-900 p-3 text-left hover:bg-gray-800 {drillDecade === decade.label ? 'ring-1 ring-green-500' : ''}"
+							onclick={() => handleDecadeClick(decade.label)}
+						>
 							<span class="w-16 text-sm font-bold text-gray-500">{decade.label}</span>
 							<div class="flex-1">
 								<div
@@ -172,7 +313,8 @@
 								></div>
 							</div>
 							<span class="w-12 text-right text-sm text-gray-400">{decade.value}</span>
-						</div>
+							<span class="text-xs text-gray-600">&rsaquo;</span>
+						</button>
 					{/each}
 				</div>
 			{/if}
