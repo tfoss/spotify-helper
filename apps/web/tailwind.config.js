@@ -5,7 +5,7 @@ export default {
 	// by Tailwind).  Without these, the chart SVG viewport clips axis labels
 	// (overflow-visible) and Spline paths default to black fill (fill-none).
 	safelist: ['overflow-visible', 'fill-none'],
-	darkMode: 'media',
+	darkMode: 'class',
 	theme: {
 		extend: {
 			screens: {
