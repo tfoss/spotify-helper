@@ -11,6 +11,11 @@
 
 	let xScale = $derived(scaleBand().domain(labels).padding(0.05));
 	let yScale = $derived(scaleLinear().domain([0, maxValue * 1.1]));
+
+	const tickLabelProps = { fill: '#9ca3af', 'font-size': 12 };
+	const labelProps = { fill: '#d1d5db', 'font-size': 13 };
+	const ruleProps = { stroke: '#374151' };
+	const gridProps = { stroke: '#1f2937' };
 </script>
 
 {#if data.length === 0}
@@ -22,17 +27,17 @@
 				<Axis
 					placement="left"
 					label={config.yLabel}
-					grid={{ class: 'stroke-gray-800' }}
-					rule={{ class: 'stroke-gray-700' }}
-					tickLabelProps={{ class: 'fill-gray-400 text-xs' }}
-					labelProps={{ class: 'fill-gray-300 text-xs' }}
+					grid={gridProps}
+					rule={ruleProps}
+					{tickLabelProps}
+					{labelProps}
 				/>
 				<Axis
 					placement="bottom"
 					label={config.xLabel}
-					rule={{ class: 'stroke-gray-700' }}
-					tickLabelProps={{ class: 'fill-gray-400 text-xs', rotate: -35, textAnchor: 'end' }}
-					labelProps={{ class: 'fill-gray-300 text-xs' }}
+					rule={ruleProps}
+					tickLabelProps={{ ...tickLabelProps, rotate: -35, textAnchor: 'end' }}
+					{labelProps}
 				/>
 				<Bars fill="#3b82f6" radius={0} />
 			</Svg>
