@@ -12,8 +12,18 @@
 	let xScale = $derived(scaleBand().domain(labels).padding(0.05));
 	let yScale = $derived(scaleLinear().domain([0, maxValue * 1.1]));
 
-	const tickLabelProps = { fill: '#9ca3af', 'font-size': 12 };
-	const labelProps = { fill: '#d1d5db', 'font-size': 13 };
+	const tickLabelProps = {
+		fill: '#9ca3af',
+		stroke: 'none' as const,
+		'stroke-width': 0,
+		'font-size': 12,
+	};
+	const labelProps = {
+		fill: '#d1d5db',
+		stroke: 'none' as const,
+		'stroke-width': 0,
+		'font-size': 13,
+	};
 	const ruleProps = { stroke: '#374151' };
 	const gridProps = { stroke: '#1f2937' };
 </script>

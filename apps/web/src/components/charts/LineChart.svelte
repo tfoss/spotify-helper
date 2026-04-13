@@ -16,8 +16,18 @@
 		return label.length > max ? label.slice(0, max - 1) + '…' : label;
 	}
 
-	const tickLabelProps = { fill: '#9ca3af', 'font-size': 12 };
-	const labelProps = { fill: '#d1d5db', 'font-size': 13 };
+	const tickLabelProps = {
+		fill: '#9ca3af',
+		stroke: 'none' as const,
+		'stroke-width': 0,
+		'font-size': 12,
+	};
+	const labelProps = {
+		fill: '#d1d5db',
+		stroke: 'none' as const,
+		'stroke-width': 0,
+		'font-size': 13,
+	};
 	const ruleProps = { stroke: '#374151' };
 	const gridProps = { stroke: '#1f2937' };
 </script>
