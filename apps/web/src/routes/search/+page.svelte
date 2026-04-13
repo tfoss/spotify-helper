@@ -1,10 +1,14 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { search } from '$lib/stores/search';
 	import { dbStore } from '$lib/stores/db';
 	import { syncStore } from '$lib/stores/sync';
 	import { authStore } from '$lib/stores/auth';
 	import { SpotifyClient } from '$lib/spotify/client';
+	import { getSavedSearches, saveSearch, removeSavedSearch } from '$lib/search/saved';
+	import type { SavedSearch } from '$lib/search/saved';
 	import SearchResults from '../../components/search/SearchResults.svelte';
 	import EmptyState from '$components/shared/EmptyState.svelte';
 	import ErrorMessage from '$components/shared/ErrorMessage.svelte';
@@ -17,10 +21,20 @@
 	let playlistCount = $state<number | null>(null);
 	let checkingDb = $state(true);
 
+	// Saved searches
+	let savedSearches = $state<SavedSearch[]>(getSavedSearches());
+	let saveNameInput = $state('');
+	let showSaveInput = $state(false);
+
 	let dbReady = $derived($dbStore.isReady);
 	let dbInitializing = $derived($dbStore.isInitializing);
 	let dbError = $derived($dbStore.error);
 	let hasPlaylists = $derived(playlistCount !== null && playlistCount > 0);
+
+	/** True when there is a non-empty active query. */
+	let hasActiveQuery = $derived(
+		refined ? (trackQuery.trim().length > 0 || artistQuery.trim().length > 0) : query.trim().length > 0
+	);
 
 	async function checkPlaylistCount() {
 		const { executor } = get(dbStore);
@@ -34,10 +48,24 @@
 		checkingDb = false;
 	}
 
+	/** Build and push a URL that encodes the current search state. */
+	function syncUrl() {
+		const params = new URLSearchParams();
+		const q = refined ? trackQuery : query;
+		if (q.trim()) params.set('q', q.trim());
+		if (refined && artistQuery.trim()) params.set('artist', artistQuery.trim());
+		if (refined) params.set('refined', '1');
+		if (fuzzyMode) params.set('fuzzy', '1');
+
+		const next = params.toString() ? `?${params.toString()}` : '/search';
+		goto(next, { replaceState: true, noScroll: true, keepFocus: true });
+	}
+
 	function handleUnifiedSearch() {
 		const { executor } = get(dbStore);
 		if (!executor) return;
 		search.performSearch({ query, mode: 'unified', fuzzy: fuzzyMode }, executor);
+		syncUrl();
 	}
 
 	function handleRefinedSearch() {
@@ -47,6 +75,7 @@
 			{ query: trackQuery, mode: 'both', artistQuery: artistQuery || undefined, fuzzy: fuzzyMode },
 			executor,
 		);
+		syncUrl();
 	}
 
 	function handleInput() {
@@ -68,6 +97,7 @@
 			artistQuery = '';
 		}
 		search.clearSearch();
+		syncUrl();
 	}
 
 	function toggleFuzzy() {
@@ -92,6 +122,80 @@
 		await syncStore.startSync(client, executor);
 		await checkPlaylistCount();
 	}
+
+	/** Save the current search state under a user-chosen name. */
+	function handleSaveSearch() {
+		if (!hasActiveQuery) return;
+		showSaveInput = true;
+	}
+
+	function commitSaveSearch() {
+		savedSearches = saveSearch(saveNameInput || (refined ? trackQuery : query), {
+			query: refined ? trackQuery : query,
+			artistQuery: refined ? artistQuery : '',
+			refined,
+			fuzzy: fuzzyMode
+		});
+		saveNameInput = '';
+		showSaveInput = false;
+	}
+
+	function cancelSaveSearch() {
+		saveNameInput = '';
+		showSaveInput = false;
+	}
+
+	/** Apply a saved search: restore state and trigger search. */
+	function applySavedSearch(s: SavedSearch) {
+		refined = s.refined;
+		fuzzyMode = s.fuzzy;
+		if (s.refined) {
+			trackQuery = s.query;
+			artistQuery = s.artistQuery;
+			query = '';
+		} else {
+			query = s.query;
+			trackQuery = '';
+			artistQuery = '';
+		}
+		handleInput();
+	}
+
+	function handleRemoveSaved(id: string) {
+		savedSearches = removeSavedSearch(id);
+	}
+
+	/** Initialise state from URL params on page load (or URL change). */
+	function initFromUrl(url: URL) {
+		const q = url.searchParams.get('q') ?? '';
+		const artist = url.searchParams.get('artist') ?? '';
+		const isRefined = url.searchParams.get('refined') === '1';
+		const isFuzzy = url.searchParams.get('fuzzy') === '1';
+
+		fuzzyMode = isFuzzy;
+		refined = isRefined;
+
+		if (isRefined) {
+			trackQuery = q;
+			artistQuery = artist;
+			query = '';
+		} else {
+			query = q;
+			trackQuery = '';
+			artistQuery = '';
+		}
+	}
+
+	// On first load, hydrate state from URL then auto-execute if there's a query.
+	$effect(() => {
+		const url = $page.url;
+		initFromUrl(url);
+
+		if (url.searchParams.get('q')) {
+			// Wait for DB to be ready before auto-searching.
+			if (dbReady) handleInput();
+		}
+	});
 
 	$effect(() => {
 		if (dbReady) {
@@ -219,7 +323,66 @@
 				<span class="inline-block h-2 w-2 rounded-full {fuzzyMode ? 'bg-green-400' : 'bg-gray-600'}"></span>
 				Fuzzy match {fuzzyMode ? '(on)' : '(off)'}
 			</button>
+
+			{#if hasActiveQuery}
+				<button
+					onclick={handleSaveSearch}
+					class="ml-auto text-xs text-gray-500 hover:text-green-400 transition-colors"
+					title="Save this search"
+				>
+					+ Save search
+				</button>
+			{/if}
 		</div>
+
+		<!-- Save search inline form -->
+		{#if showSaveInput}
+			<div class="flex items-center gap-2 rounded-lg bg-gray-800 px-3 py-2 ring-1 ring-gray-700">
+				<input
+					bind:value={saveNameInput}
+					type="text"
+					placeholder="Name this search…"
+					class="flex-1 bg-transparent text-sm text-white placeholder-gray-500 outline-none"
+					onkeydown={(e) => { if (e.key === 'Enter') commitSaveSearch(); if (e.key === 'Escape') cancelSaveSearch(); }}
+				/>
+				<button
+					onclick={commitSaveSearch}
+					class="rounded bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-500"
+				>
+					Save
+				</button>
+				<button
+					onclick={cancelSaveSearch}
+					class="text-xs text-gray-500 hover:text-gray-300"
+				>
+					Cancel
+				</button>
+			</div>
+		{/if}
+
+		<!-- Saved search chips -->
+		{#if savedSearches.length > 0}
+			<div class="flex flex-wrap gap-2 pt-1">
+				{#each savedSearches as s (s.id)}
+					<div class="group flex items-center gap-1 rounded-full bg-gray-800 px-3 py-1 ring-1 ring-gray-700">
+						<button
+							onclick={() => applySavedSearch(s)}
+							class="text-xs text-gray-300 hover:text-white transition-colors"
+							title="Apply saved search: {s.name}"
+						>
+							{s.name}
+						</button>
+						<button
+							onclick={() => handleRemoveSaved(s.id)}
+							class="ml-1 hidden text-xs text-gray-600 hover:text-red-400 group-hover:inline transition-colors"
+							title="Remove saved search"
+						>
+							×
+						</button>
+					</div>
+				{/each}
+			</div>
+		{/if}
 	</div>
 
 	<!-- Loading state -->
