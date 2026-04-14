@@ -17,22 +17,23 @@
 		return label.length > max ? label.slice(0, max - 1) + '…' : label;
 	}
 
-	// LayerChart applies a default class `stroke-surface-100 [stroke-width:2px]`
-	// to tick/label text. Those "surface-*" utilities are undefined in this
-	// project (no Skeleton theme), so the 2px stroke paints in a broken/black
-	// color ON TOP of the fill (paint-order: stroke), making text effectively
-	// invisible. We override by setting the Text `fill` prop and nulling out
-	// the stroke/stroke-width via $$restProps so nothing outlines the glyphs.
+	// LayerChart applies default classes `stroke-surface-100 [stroke-width:2px]`
+	// to all tick/label Text components. `stroke-surface-100` is a Skeleton UI
+	// utility not defined in this project, and `[stroke-width:2px]` is an
+	// arbitrary Tailwind class whose CSS specificity overrides SVG presentation
+	// attributes. The result: a 2px stroke (inheriting currentColor) paints over
+	// the fill (paint-order: stroke), making text invisible.
+	//
+	// Fix: use the `classes` prop on each Axis — cls() uses tailwind-merge, so
+	// `stroke-none` and `[stroke-width:0px]` properly supersede the defaults.
+	const axisClasses = { tickLabel: 'stroke-none [stroke-width:0px]', label: 'stroke-none [stroke-width:0px]' };
+
 	const tickLabelProps = {
 		fill: '#9ca3af',
-		stroke: 'none' as const,
-		'stroke-width': 0,
 		'font-size': 12,
 	};
 	const labelProps = {
 		fill: '#d1d5db',
-		stroke: 'none' as const,
-		'stroke-width': 0,
 		'font-size': 13,
 	};
 	const ruleProps = { stroke: '#374151' };
@@ -43,7 +44,7 @@
 	<p class="py-10 text-center text-sm text-gray-500">No data available</p>
 {:else}
 	<div class="h-72 w-full">
-		<Chart {data} x="label" y="value" {xScale} {yScale} padding={{ left: 56, bottom: 64, top: 8, right: 8 }}>
+		<Chart {data} x="label" y="value" {xScale} {yScale} padding={{ left: 72, bottom: 72, top: 8, right: 8 }}>
 			<Svg>
 				<Axis
 					placement="left"
@@ -52,6 +53,7 @@
 					rule={ruleProps}
 					{tickLabelProps}
 					{labelProps}
+					classes={axisClasses}
 				/>
 				<Axis
 					placement="bottom"
@@ -60,6 +62,7 @@
 					format={(v: string) => truncate(v)}
 					tickLabelProps={{ ...tickLabelProps, rotate: -35, textAnchor: 'end' }}
 					{labelProps}
+					classes={axisClasses}
 				/>
 				<Bars fill="#22c55e" radius={2} />
 			</Svg>
