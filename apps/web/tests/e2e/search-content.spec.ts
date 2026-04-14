@@ -294,6 +294,20 @@ test.describe('Search: content with mocked sync', () => {
 		expect(firstHref === 'spotify:playlist:pl-001' || firstHref === 'spotify:playlist:pl-003').toBe(true);
 	});
 
+	test('search input accepts spaces (regression: sh-ywg)', async ({ page }) => {
+		await page.goto('/search');
+		await waitForSearchInput(page);
+
+		const input = page.locator('input[type="text"]').first();
+		await input.click();
+
+		// Type a query that includes a space — the URL sync must not strip it
+		await input.pressSequentially('bohemian rhapsody');
+
+		await expect(input).toBeFocused();
+		await expect(input).toHaveValue('bohemian rhapsody');
+	});
+
 	test('search input retains focus while typing multiple characters (regression: sh-4ey)', async ({ page }) => {
 		await page.goto('/search');
 		await waitForSearchInput(page);
