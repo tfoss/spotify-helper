@@ -12,9 +12,9 @@
 	let { results = null, isSearching = false, error = null, searchQuery = '' }: Props = $props();
 
 	const MATCH_BADGE: Record<string, string> = {
-		track: 'bg-green-900 text-green-300',
-		artist: 'bg-blue-900 text-blue-300',
-		album: 'bg-purple-900 text-purple-300',
+		track: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+		artist: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+		album: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
 	};
 </script>
 
@@ -29,14 +29,14 @@
 	<ul class="space-y-1">
 		{#each results.items as item (item.playlistId + item.trackId)}
 			<li>
-				<div class="flex items-start gap-3 rounded-lg px-3 py-2 hover:bg-gray-800">
+				<div class="flex items-start gap-3 rounded-lg px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800">
 					<div class="min-w-0 flex-1">
 						<div class="flex items-center gap-2">
 							<a
 								href="spotify:track:{item.trackId}:playlist:{item.playlistId}"
 								target="_blank"
 								rel="noopener noreferrer"
-								class="truncate font-medium text-white underline-offset-2 hover:text-green-400 hover:underline"
+								class="truncate font-medium text-gray-900 underline-offset-2 hover:text-green-600 hover:underline dark:text-white dark:hover:text-green-400"
 							>
 								<HighlightText text={item.trackName} query={searchQuery} />
 							</a>
@@ -44,7 +44,7 @@
 								{item.matchType}
 							</span>
 						</div>
-						<p class="truncate text-sm text-gray-400">
+						<p class="truncate text-sm text-gray-500 dark:text-gray-400">
 							<HighlightText text={item.artistName} query={searchQuery} /> · {item.albumName}
 						</p>
 					</div>
@@ -53,7 +53,7 @@
 							href="spotify:playlist:{item.playlistId}"
 							target="_blank"
 							rel="noopener noreferrer"
-							class="block truncate text-sm font-medium text-gray-300 underline-offset-2 hover:text-green-400 hover:underline"
+							class="block truncate text-sm font-medium text-gray-600 underline-offset-2 hover:text-green-600 hover:underline dark:text-gray-300 dark:hover:text-green-400"
 						>
 							{item.playlistName}
 						</a>
