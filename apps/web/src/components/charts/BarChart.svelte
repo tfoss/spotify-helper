@@ -17,24 +17,41 @@
 		return label.length > max ? label.slice(0, max - 1) + '…' : label;
 	}
 
-	// LayerChart applies default classes `stroke-surface-100 [stroke-width:2px]`
-	// to all tick/label Text components. `stroke-surface-100` is a Skeleton UI
-	// utility not defined in this project, and `[stroke-width:2px]` is an
-	// arbitrary Tailwind class whose CSS specificity overrides SVG presentation
-	// attributes. The result: a 2px stroke (inheriting currentColor) paints over
-	// the fill (paint-order: stroke), making text invisible.
+	// LayerChart hard-codes `stroke-surface-100 [stroke-width:2px]` on all axis
+	// tick/label Text elements. `stroke-surface-100` references a Skeleton UI
+	// CSS variable not defined in this project (undefined → invalid color →
+	// browser falls back to inherited/default stroke). `[stroke-width:2px]` is
+	// a Tailwind arbitrary CSS class with specificity (0,1,0), which OVERRIDES
+	// any SVG presentation attribute like stroke-width="0" (specificity 0,0,0).
+	// Previous fixes using SVG attributes or `stroke-none` (not a real Tailwind
+	// v3 utility, so it generates no CSS) all failed for these reasons.
 	//
-	// Fix: use the `classes` prop on each Axis — cls() uses tailwind-merge, so
-	// `stroke-none` and `[stroke-width:0px]` properly supersede the defaults.
-	const axisClasses = { tickLabel: 'stroke-none [stroke-width:0px]', label: 'stroke-none [stroke-width:0px]' };
+	// Three-layer fix applied here:
+	//  1. `style` prop in tickLabelProps/labelProps — flows through Axis →
+	//     Text $$restProps → <text style="...">. Inline styles have specificity
+	//     (1,0,0), beating any CSS class rule.
+	//  2. `classes` prop with `[stroke:none]` (valid arbitrary Tailwind property)
+	//     and `[stroke-width:0]` — tailwind-merge removes the conflicting defaults.
+	//  3. `:global` CSS with `!important` in the <style> block below — catches
+	//     any edge case where layers 1 or 2 don't reach the rendered element.
+	const TICK_STYLE = 'stroke: none; stroke-width: 0; fill: #9ca3af;';
+	const LABEL_STYLE = 'stroke: none; stroke-width: 0; fill: #d1d5db;';
+	const axisClasses = {
+		tickLabel: '[stroke:none] [stroke-width:0]',
+		label: '[stroke:none] [stroke-width:0]',
+	};
 
 	const tickLabelProps = {
 		fill: '#9ca3af',
+		strokeWidth: 0,
 		'font-size': 12,
+		style: TICK_STYLE,
 	};
 	const labelProps = {
 		fill: '#d1d5db',
+		strokeWidth: 0,
 		'font-size': 13,
+		style: LABEL_STYLE,
 	};
 	const ruleProps = { stroke: '#374151' };
 	const gridProps = { stroke: '#1f2937' };
@@ -43,7 +60,8 @@
 {#if data.length === 0}
 	<p class="py-10 text-center text-sm text-gray-500">No data available</p>
 {:else}
-	<div class="h-72 w-full">
+	<!-- overflow-visible prevents the wrapper div from clipping rotated bottom-axis labels -->
+	<div class="h-72 w-full overflow-visible">
 		<Chart {data} x="label" y="value" {xScale} {yScale} padding={{ left: 72, bottom: 72, top: 8, right: 8 }}>
 			<Svg>
 				<Axis
@@ -60,7 +78,7 @@
 					label={config.xLabel}
 					rule={ruleProps}
 					format={(v: string) => truncate(v)}
-					tickLabelProps={{ ...tickLabelProps, rotate: -35, textAnchor: 'end' }}
+					tickLabelProps={{ ...tickLabelProps, rotate: -35, textAnchor: 'end', style: TICK_STYLE }}
 					{labelProps}
 					classes={axisClasses}
 				/>
