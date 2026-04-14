@@ -133,17 +133,20 @@ export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const url = new URL(request.url);
 
-		// Handle CORS preflight
+		// Validate origin first — no CORS headers for unknown origins
+		if (!validateOrigin(request, env.ALLOWED_ORIGIN)) {
+			return new Response(JSON.stringify({ error: 'Forbidden' }), {
+				status: 403,
+				headers: { 'Content-Type': 'application/json' },
+			});
+		}
+
+		// Handle CORS preflight (origin already validated above)
 		if (request.method === 'OPTIONS') {
 			return new Response(null, {
 				status: 204,
 				headers: corsHeaders(env.ALLOWED_ORIGIN),
 			});
-		}
-
-		// Validate origin for non-OPTIONS requests
-		if (!validateOrigin(request, env.ALLOWED_ORIGIN)) {
-			return errorResponse('Forbidden', 403, env.ALLOWED_ORIGIN);
 		}
 
 		if (request.method !== 'POST') {
