@@ -53,8 +53,11 @@
 	function syncUrl() {
 		const params = new URLSearchParams();
 		const q = refined ? trackQuery : query;
-		if (q.trim()) params.set('q', q.trim());
-		if (refined && artistQuery.trim()) params.set('artist', artistQuery.trim());
+		// Preserve exact value (including spaces) so the URL-watching $effect doesn't
+		// strip spaces the user is in the process of typing. Only skip the param if the
+		// value is entirely whitespace.
+		if (q.trim()) params.set('q', q);
+		if (refined && artistQuery.trim()) params.set('artist', artistQuery);
 		if (refined) params.set('refined', '1');
 		if (fuzzyMode) params.set('fuzzy', '1');
 
