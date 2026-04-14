@@ -12,16 +12,17 @@
 	let xScale = $derived(scaleBand().domain(labels).padding(0.05));
 	let yScale = $derived(scaleLinear().domain([0, maxValue * 1.1]));
 
+	// LayerChart applies default classes `stroke-surface-100 [stroke-width:2px]`
+	// to all tick/label Text components. Fix: use the `classes` prop on each Axis
+	// so tailwind-merge supersedes the defaults via `stroke-none [stroke-width:0px]`.
+	const axisClasses = { tickLabel: 'stroke-none [stroke-width:0px]', label: 'stroke-none [stroke-width:0px]' };
+
 	const tickLabelProps = {
 		fill: '#9ca3af',
-		stroke: 'none' as const,
-		'stroke-width': 0,
 		'font-size': 12,
 	};
 	const labelProps = {
 		fill: '#d1d5db',
-		stroke: 'none' as const,
-		'stroke-width': 0,
 		'font-size': 13,
 	};
 	const ruleProps = { stroke: '#374151' };
@@ -41,6 +42,7 @@
 					rule={ruleProps}
 					{tickLabelProps}
 					{labelProps}
+					classes={axisClasses}
 				/>
 				<Axis
 					placement="bottom"
@@ -49,6 +51,7 @@
 					ticks={10}
 					tickLabelProps={{ ...tickLabelProps, rotate: -35, textAnchor: 'end' }}
 					{labelProps}
+					classes={axisClasses}
 				/>
 				<Bars fill="#3b82f6" radius={0} />
 			</Svg>
