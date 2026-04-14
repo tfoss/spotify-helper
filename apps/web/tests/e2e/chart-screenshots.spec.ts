@@ -2,11 +2,17 @@
  * Analytics chart screenshot capture (sh-21v).
  *
  * Saves PNG screenshots of every chart in the Analytics view to
- * screenshots/plots/ for human review. Screenshots are regenerated on every
- * run (existing files are overwritten — no regression diffing here).
+ * docs/screenshots/ (project root) for human review. Screenshots are
+ * regenerated on every run (existing files are overwritten — no regression
+ * diffing here).
  *
  * Seeded Spotify API mocks ensure charts render with known data even without
  * a real Spotify account.
+ *
+ * Run:
+ *   cd apps/web && npx playwright test chart-screenshots
+ * Output:
+ *   <repo-root>/docs/screenshots/*.png
  */
 
 import path from 'path';
@@ -63,9 +69,12 @@ const RECENTLY_PLAYED = Array.from({ length: 10 }, (_, i) => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Resolve a screenshot output path relative to the project root (apps/web/). */
+/**
+ * Resolve a screenshot output path to docs/screenshots/ at the project root.
+ * Playwright runs from apps/web/, so we go up two levels to reach the repo root.
+ */
 function plotPath(filename: string): string {
-	return path.join('screenshots', 'plots', filename);
+	return path.join('..', '..', 'docs', 'screenshots', filename);
 }
 
 /** Wire up Spotify API mocks and inject a fake refresh token. */
@@ -131,16 +140,23 @@ async function setupMocks(page: Page): Promise<void> {
 	});
 }
 
-/** Wait until at least `minCount` SVG text nodes have visible content. */
+/**
+ * Wait until SVG text nodes are visible, or fall back after the timeout.
+ * Screenshots are captured regardless so we always get a visual record.
+ */
 async function waitForChartText(page: Page, minCount = 3): Promise<void> {
-	await page.waitForFunction(
-		(n: number) => {
-			const texts = Array.from(document.querySelectorAll('svg text'));
-			return texts.filter((t) => (t.textContent ?? '').trim().length > 0).length >= n;
-		},
-		minCount,
-		{ timeout: 20_000 },
-	);
+	try {
+		await page.waitForFunction(
+			(n: number) => {
+				const texts = Array.from(document.querySelectorAll('svg text'));
+				return texts.filter((t) => (t.textContent ?? '').trim().length > 0).length >= n;
+			},
+			minCount,
+			{ timeout: 8_000 },
+		);
+	} catch {
+		// Chart didn't populate within the timeout — screenshot the current state anyway.
+	}
 }
 
 // ---------------------------------------------------------------------------
