@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
+	import { untrack } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { search } from '$lib/stores/search';
@@ -186,14 +187,24 @@
 		}
 	}
 
-	// On first load, hydrate state from URL then auto-execute if there's a query.
+	// Hydrate state from URL on page load or navigation (back/forward).
+	// Does NOT call handleInput() — oninput handles searches triggered by typing,
+	// and the effect below handles the initial auto-search on page load.
 	$effect(() => {
 		const url = $page.url;
 		initFromUrl(url);
+	});
 
+	// Auto-search once when the DB becomes ready, if the page was loaded with a
+	// query already in the URL (e.g. shared link or bookmark).
+	// Uses untrack() so that handleInput() → syncUrl() → goto() does not cause
+	// $page.url to change inside this effect's reactive scope, which would create
+	// an infinite loop that strips focus from the search input after one character.
+	$effect(() => {
+		if (!dbReady) return;
+		const url = untrack(() => $page.url);
 		if (url.searchParams.get('q')) {
-			// Wait for DB to be ready before auto-searching.
-			if (dbReady) handleInput();
+			untrack(() => handleInput());
 		}
 	});
 

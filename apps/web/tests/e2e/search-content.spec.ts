@@ -294,6 +294,22 @@ test.describe('Search: content with mocked sync', () => {
 		expect(firstHref === 'spotify:playlist:pl-001' || firstHref === 'spotify:playlist:pl-003').toBe(true);
 	});
 
+	test('search input retains focus while typing multiple characters (regression: sh-4ey)', async ({ page }) => {
+		await page.goto('/search');
+		await waitForSearchInput(page);
+
+		const input = page.locator('input[type="text"]').first();
+		await input.click();
+
+		// Type each character individually — if the component re-mounts after
+		// each keystroke the input would lose focus and not accumulate the string.
+		await input.pressSequentially('bohemian');
+
+		// Input should still be focused and contain all typed characters.
+		await expect(input).toBeFocused();
+		await expect(input).toHaveValue('bohemian');
+	});
+
 	test('search result card wrapper is not itself a link', async ({ page }) => {
 		await page.goto('/search');
 		await waitForSearchInput(page);
