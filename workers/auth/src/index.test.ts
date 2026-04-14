@@ -51,6 +51,24 @@ describe('origin validation', () => {
 		expect(res.status).toBe(403);
 	});
 
+	it('returns 403 with no CORS headers for unknown origin', async () => {
+		const req = makeRequest('/exchange', {}, 'https://evil.com');
+		const res = await worker.fetch(req, env);
+		expect(res.status).toBe(403);
+		expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull();
+		expect(res.headers.get('Access-Control-Allow-Methods')).toBeNull();
+	});
+
+	it('returns 403 for OPTIONS preflight from unknown origin', async () => {
+		const req = new Request('https://worker.example.com/exchange', {
+			method: 'OPTIONS',
+			headers: { Origin: 'https://evil.com' },
+		});
+		const res = await worker.fetch(req, env);
+		expect(res.status).toBe(403);
+		expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull();
+	});
+
 	it('returns 405 for non-POST methods from valid origin', async () => {
 		const req = new Request('https://worker.example.com/exchange', {
 			method: 'GET',
