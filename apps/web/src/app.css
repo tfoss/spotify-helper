@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * LayerChart axis fix: hard-codes `stroke-surface-100 [stroke-width:2px]` on
+ * tick/label text elements. `stroke-surface-100` uses an undefined Skeleton CSS
+ * variable, and `[stroke-width:2px]` (a Tailwind arbitrary class, specificity
+ * 0,1,0) overrides any SVG presentation attribute. This rule uses !important
+ * to ensure axis labels are always visible regardless of class order.
+ * The BarChart component also passes inline `style` props as the primary fix.
+ */
+.Axis .tickLabel text,
+.Axis .label text {
+  stroke: none !important;
+  stroke-width: 0 !important;
+}
