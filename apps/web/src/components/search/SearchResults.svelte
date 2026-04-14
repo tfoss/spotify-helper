@@ -29,17 +29,17 @@
 	<ul class="space-y-1">
 		{#each results.items as item (item.playlistId + item.trackId)}
 			<li>
-				<a
-					href={item.spotifyPlaylistUrl}
-					target="_blank"
-					rel="noopener noreferrer"
-					class="flex items-start gap-3 rounded-lg px-3 py-2 hover:bg-gray-800"
-				>
+				<div class="flex items-start gap-3 rounded-lg px-3 py-2 hover:bg-gray-800">
 					<div class="min-w-0 flex-1">
 						<div class="flex items-center gap-2">
-							<span class="truncate font-medium text-white">
+							<a
+								href="spotify:track:{item.trackId}:playlist:{item.playlistId}"
+								target="_blank"
+								rel="noopener noreferrer"
+								class="truncate font-medium text-white underline-offset-2 hover:text-green-400 hover:underline"
+							>
 								<HighlightText text={item.trackName} query={searchQuery} />
-							</span>
+							</a>
 							<span class="shrink-0 rounded px-1.5 py-0.5 text-xs {MATCH_BADGE[item.matchType]}">
 								{item.matchType}
 							</span>
@@ -49,10 +49,17 @@
 						</p>
 					</div>
 					<div class="shrink-0 text-right">
-						<p class="truncate text-sm font-medium text-gray-300">{item.playlistName}</p>
+						<a
+							href="spotify:playlist:{item.playlistId}"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="block truncate text-sm font-medium text-gray-300 underline-offset-2 hover:text-green-400 hover:underline"
+						>
+							{item.playlistName}
+						</a>
 						<p class="text-xs text-gray-500">{item.playlistOwner}</p>
 					</div>
-				</a>
+				</div>
 			</li>
 		{/each}
 	</ul>

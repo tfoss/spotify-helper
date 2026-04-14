@@ -251,4 +251,66 @@ test.describe('Search: content with mocked sync', () => {
 		// t-010 "Rolling in the Deep" by Adele is in pl-001 (Chill Vibes)
 		expect(resultText).toMatch(/rolling in the deep|adele/i);
 	});
+
+	test('search result track name links to spotify:track URI with playlist context', async ({ page }) => {
+		await page.goto('/search');
+		await waitForSearchInput(page);
+
+		const input = page.locator('input[type="text"]').first();
+		await input.fill('bohemian');
+		await input.dispatchEvent('input');
+
+		await page.waitForTimeout(1000);
+
+		// t-001 "Bohemian Rhapsody" is in pl-001 (Chill Vibes) and pl-003 (Road Trip)
+		// Find the track name link for Chill Vibes result
+		const trackLinks = page.locator('a[href^="spotify:track:"]');
+		await expect(trackLinks.first()).toBeVisible();
+
+		const firstHref = await trackLinks.first().getAttribute('href');
+		// Should be spotify:track:{trackId}:playlist:{playlistId}
+		expect(firstHref).toMatch(/^spotify:track:[^:]+:playlist:[^:]+$/);
+		expect(firstHref).toContain('spotify:track:t-001:playlist:');
+	});
+
+	test('search result playlist name links to spotify:playlist URI', async ({ page }) => {
+		await page.goto('/search');
+		await waitForSearchInput(page);
+
+		const input = page.locator('input[type="text"]').first();
+		await input.fill('bohemian');
+		await input.dispatchEvent('input');
+
+		await page.waitForTimeout(1000);
+
+		// Find the playlist name link
+		const playlistLinks = page.locator('a[href^="spotify:playlist:"]');
+		await expect(playlistLinks.first()).toBeVisible();
+
+		const firstHref = await playlistLinks.first().getAttribute('href');
+		// Should be spotify:playlist:{playlistId}
+		expect(firstHref).toMatch(/^spotify:playlist:[^:]+$/);
+		// Bohemian Rhapsody is in pl-001 (Chill Vibes) and pl-003 (Road Trip)
+		expect(firstHref === 'spotify:playlist:pl-001' || firstHref === 'spotify:playlist:pl-003').toBe(true);
+	});
+
+	test('search result card wrapper is not itself a link', async ({ page }) => {
+		await page.goto('/search');
+		await waitForSearchInput(page);
+
+		const input = page.locator('input[type="text"]').first();
+		await input.fill('bohemian');
+		await input.dispatchEvent('input');
+
+		await page.waitForTimeout(1000);
+
+		// The list item's direct child should be a div, not an anchor
+		const listItems = page.locator('ul li');
+		await expect(listItems.first()).toBeVisible();
+		const firstChild = listItems.first().locator('> div');
+		await expect(firstChild).toBeVisible();
+		// Confirm there's no wrapping anchor on the card
+		const cardAnchor = listItems.first().locator('> a');
+		await expect(cardAnchor).toHaveCount(0);
+	});
 });
