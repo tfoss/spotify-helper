@@ -64,7 +64,7 @@
 </script>
 
 <div class="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-white">
-	<nav class="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+	<nav class="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900" style="padding-top: env(safe-area-inset-top, 0px);">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 			<div class="flex h-16 items-center justify-between">
 				<div class="flex items-center gap-4 sm:gap-8">
